@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>game_test</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="panel">
+        <div>
+          <p class="eyebrow">Mini browser game</p>
+          <h1>game_test</h1>
+          <p class="desc">Use ← → or A / D to dodge falling blocks. Survive as long as you can.</p>
+        </div>
+        <div class="hud">
+          <div><span>Score</span><strong id="score">0</strong></div>
+          <div><span>Best</span><strong id="best">0</strong></div>
+          <div><span>Status</span><strong id="status">Ready</strong></div>
+        </div>
+        <button id="startBtn">Start / Restart</button>
+      </section>
+      <section class="game-shell">
+        <canvas id="game" width="420" height="640"></canvas>
+        <p class="hint">Tip: mobile also supports touching left / right half of the canvas.</p>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
