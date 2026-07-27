@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>星際戰機：深空獵手</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #030308;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 600px;
+            max-height: 900px;
+            background: #000;
+            box-shadow: 0 0 35px rgba(0, 200, 255, 0.25);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(5, 7, 20, 0.92);
+            backdrop-filter: blur(8px);
+            z-index: 10;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.2s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #00f0ff;
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+            margin-bottom: 8px;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 0.95rem;
+            color: #a0a0c0;
+            margin-bottom: 15px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, #0052d4, #4364f7);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(67, 100, 247, 0.4);
+            transition: all 0.15s ease;
+            outline: none;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 16px rgba(67, 100, 247, 0.7);
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-green {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            box-shadow: 0 4px 12px rgba(56, 239, 125, 0.4);
+        }
+
+        .btn-orange {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            box-shadow: 0 4px 12px rgba(255, 65, 108, 0.4);
+        }
+
+        .btn-red {
+            background: linear-gradient(135deg, #cb2d3e, #ef473a);
+            box-shadow: 0 4px 12px rgba(239, 71, 58, 0.4);
+        }
+
+        .btn-small {
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            border-radius: 12px;
+        }
+
+        /* 選單與面板樣式 */
+        .panel {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(15, 20, 35, 0.8);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+
+        .upgrade-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .upgrade-info {
+            text-align: left;
+        }
+
+        .upgrade-title {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .upgrade-desc {
+            font-size: 0.75rem;
+            color: #8a8ab0;
+        }
+
+        .dungeon-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+        }
+
+        .dungeon-card.locked {
+            opacity: 0.5;
+            filter: grayscale(1);
+        }
+
+        .currency-display {
+            font-size: 1.1rem;
+            color: #ffd700;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 提示通知框 */
+        .toast {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 240, 255, 0.9);
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            z-index: 20;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* 手機炸彈按鈕 */
+        #bomb-btn {
+            position: absolute;
+            bottom: 25px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff416c, #ff4b2b);
+            border: 2px solid #fff;
+            color: white;
+            font-size: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 15px rgba(255, 65, 108, 0.6);
+            z-index: 5;
+            cursor: pointer;
+        }
+
+        #bomb-count {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #fff;
+            color: #ff416c;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+    <style>.back-link{position:absolute;top:12px;left:12px;z-index:30;text-decoration:none;padding:8px 14px;font-size:.85rem;font-weight:bold;color:#fff;background:linear-gradient(135deg,#0052d4,#4364f7);border:1px solid rgba(255,255,255,.2);border-radius:14px;box-shadow:0 4px 12px rgba(67,100,247,.4)}</style>
+</head>
+<body>
+
+<div id="game-container">
+    <a class="back-link" href="/">← 返回入口</a>
+    <canvas id="gameCanvas"></canvas>
+    <div id="toast" class="toast">進度已儲存！</div>
+
+    <!-- 炸彈按鈕 -->
+    <div id="bomb-btn" class="hidden">
+        💣
+        <div id="bomb-count">0</div>
+    </div>
+
+    <!-- 主選單 -->
+    <div id="main-menu" class="overlay">
+        <h1>星際戰機</h1>
+        <p>深空獵手 - 本地存檔版</p>
+        
+        <div class="currency-display">
+            🪙 金幣: <span id="menu-coins">0</span>
+        </div>
+
+        <button class="btn btn-green" id="btn-open-dungeons">🚀 選擇副本任務</button>
+        <button class="btn" id="btn-open-upgrades">🔧 戰機升級工坊</button>
+        <button class="btn btn-orange" id="btn-save-game">💾 手動儲存進度</button>
+        <button class="btn btn-red btn-small" id="btn-reset-game" style="margin-top: 15px;">🗑️ 重置存檔</button>
+    </div>
+
+    <!-- 副本選擇選單 -->
+    <div id="dungeon-menu" class="overlay hidden">
+        <h2>🌌 選擇副本關卡</h2>
+        <div class="panel" id="dungeon-list"></div>
+        <button class="btn" id="btn-close-dungeons">返回主選單</button>
+    </div>
+
+    <!-- 升級選單 -->
+    <div id="upgrade-menu" class="overlay hidden">
+        <h2>🔧 戰機改造工坊</h2>
+        <div class="currency-display">
+            🪙 金幣: <span id="upgrade-coins">0</span>
+        </div>
+        <div class="panel" id="upgrade-list"></div>
+        <button class="btn" id="btn-close-upgrades">返回主選單</button>
+    </div>
+
+    <!-- 關卡結算畫面 -->
+    <div id="game-over-screen" class="overlay hidden">
+        <h1 id="result-title">任務失敗</h1>
+        <p id="result-desc">你的戰機已被摧毀</p>
+        <div class="currency-display">獲得金幣: +<span id="earned-coins">0</span></div>
+        <button class="btn" id="btn-restart">再次挑戰</button>
+        <button class="btn btn-green" id="btn-return-menu">返回大廳</button>
+    </div>
+</div>
+
+<script>
+/**
+ * 本地存檔系統 (localStorage)
+ */
+const STORAGE_KEY = 'GALAXY_SHOOTER_SAVE_DATA_V1';
+
+const defaultSaveData = {
+    coins: 0,
+    unlockedDungeon: 1,
+    upgrades: {
+        attack: 1,
+        fireRate: 1,
+        hp: 1,
+        shieldDur: 1
+    }
+};
+
+let saveData = { ...defaultSaveData };
+
+function loadFromLocalStorage() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            saveData = JSON.parse(saved);
+        } else {
+            saveData = JSON.parse(JSON.stringify(defaultSaveData));
+        }
+    } catch (e) {
+        console.warn("無法存取 localStorage:", e);
+        saveData = JSON.parse(JSON.stringify(defaultSaveData));
+    }
+}
+
+function saveToLocalStorage(showNotification = true) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+        if (showNotification) {
+            showToast("💾 遊戲進度已儲存！");
+        }
+    } catch (e) {
+        console.error("寫入 localStorage 失敗:", e);
+        if (showNotification) {
+            showToast("⚠️ 存檔失敗");
+        }
+    }
+}
+
+function resetLocalStorage() {
+    if (confirm("確定要清除所有金幣、升級與關卡紀錄嗎？")) {
+        localStorage.removeItem(STORAGE_KEY);
+        saveData = JSON.parse(JSON.stringify(defaultSaveData));
+        saveToLocalStorage(false);
+        updateUI();
+        showToast("已重置所有數據！");
+    }
+}
+
+function showToast(text) {
+    const toast = document.getElementById('toast');
+    toast.textContent = text;
+    toast.style.opacity = '1';
+    setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+}
+
+// 副本設定檔
+const DUNGEONS = [
+    { id: 1, name: "第一區：小行星帶隕石群", desc: "清理亂流中的小行星與敵方先鋒。", targetKill: 30, bossHp: 1200, bossColor: '#ffbb00', reward: 500 },
+    { id: 2, name: "第二區：深空前哨基地", desc: "面對密集彈幕與追蹤敵機隊伍。", targetKill: 50, bossHp: 3000, bossColor: '#ff00aa', reward: 1200 },
+    { id: 3, name: "第三區：母艦核心突襲", desc: "極高難度，決戰超巨型宇宙防衛堡壘！", targetKill: 70, bossHp: 8000, bossColor: '#00ffcc', reward: 3000 }
+];
+
+/**
+ * 音效產生器 (Web Audio API)
+ */
+class SoundManager {
+    constructor() { this.ctx = null; }
+    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+    playShoot() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.08);
+    }
+    playExplosion(isLarge = false) {
+        if (!this.ctx) return;
+        const dur = isLarge ? 0.4 : 0.2;
+        const bufferSize = this.ctx.sampleRate * dur;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource(); noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(isLarge ? 300 : 700, this.ctx.currentTime);
+        filter.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + dur);
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(isLarge ? 0.25 : 0.12, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
+        noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+        noise.start();
+    }
+    playPowerup() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(350, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(900, this.ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+    }
+}
+
+const sounds = new SoundManager();
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('game-container');
+
+let gameWidth = 0, gameHeight = 0, gameRunning = false;
+let currentDungeon = DUNGEONS[0], killsCount = 0, bossSpawned = false, earnedCoinsThisRun = 0;
+let frameCount = 0, lastTime = 0, shakeTime = 0;
+
+const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false };
+let player, bullets = [], enemyBullets = [], enemies = [], particles = [], powerups = [], stars = [];
+
+function resizeCanvas() {
+    gameWidth = container.clientWidth;
+    gameHeight = container.clientHeight;
+    canvas.width = gameWidth;
+    canvas.height = gameHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+class Star {
+    constructor() { this.reset(); this.y = Math.random() * gameHeight; }
+    reset() {
+        this.x = Math.random() * gameWidth; this.y = 0;
+        this.size = Math.random() * 2 + 0.5; this.speed = this.size * 1.5;
+        this.color = `rgba(255, 255, 255, ${Math.random() * 0.6 + 0.3})`;
+    }
+    update() { this.y += this.speed; if (this.y > gameHeight) this.reset(); }
+    draw() { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); }
+}
+
+class Player {
+    constructor() {
+        this.width = 40; this.height = 46;
+        this.x = gameWidth / 2; this.y = gameHeight - 100;
+        this.speed = 6.5;
+
+        const atkLvl = saveData.upgrades.attack;
+        const hpLvl = saveData.upgrades.hp;
+        const durLvl = saveData.upgrades.shieldDur;
+        const firLvl = saveData.upgrades.fireRate;
+
+        this.damage = 6 + (atkLvl - 1) * 3;
+        this.maxHp = 100 + (hpLvl - 1) * 25;
+        this.hp = this.maxHp;
+        this.shieldMaxDur = 5000 + (durLvl - 1) * 2000;
+        this.shootInterval = Math.max(70, 160 - (firLvl - 1) * 15);
+
+        this.shield = false; this.shieldTimer = 0; this.tripleShotTimer = 0;
+        this.bombs = 2; this.lastShoot = 0;
+    }
+
+    update(dt) {
+        if ((keys.ArrowLeft || keys.a) && this.x > this.width / 2) this.x -= this.speed;
+        if ((keys.ArrowRight || keys.d) && this.x < gameWidth - this.width / 2) this.x += this.speed;
+        if ((keys.ArrowUp || keys.w) && this.y > this.height / 2) this.y -= this.speed;
+        if ((keys.ArrowDown || keys.s) && this.y < gameHeight - this.height / 2) this.y += this.speed;
+
+        if (this.shieldTimer > 0) {
+            this.shieldTimer -= dt;
+            if (this.shieldTimer <= 0) this.shield = false;
+        }
+        if (this.tripleShotTimer > 0) this.tripleShotTimer -= dt;
+
+        const now = Date.now();
+        if (now - this.lastShoot > this.shootInterval) {
+            this.shoot();
+            this.lastShoot = now;
+        }
+    }
+
+    shoot() {
+        sounds.playShoot();
+        if (this.tripleShotTimer > 0) {
+            bullets.push(new Bullet(this.x, this.y - 20, 0, -13, true, this.damage));
+            bullets.push(new Bullet(this.x - 12, this.y - 15, -2.5, -12, true, this.damage));
+            bullets.push(new Bullet(this.x + 12, this.y - 15, 2.5, -12, true, this.damage));
+        } else {
+            bullets.push(new Bullet(this.x - 10, this.y - 15, 0, -13, true, this.damage));
+            bullets.push(new Bullet(this.x + 10, this.y - 15, 0, -13, true, this.damage));
+        }
+    }
+
+    useBomb() {
+        if (this.bombs > 0) {
+            this.bombs--;
+            document.getElementById('bomb-count').textContent = this.bombs;
+            shakeTime = 25;
+            sounds.playExplosion(true);
+            enemyBullets = [];
+            enemies.forEach(e => {
+                if (e.type !== 'boss') {
+                    e.hp = 0;
+                    createExplosion(e.x, e.y, e.color, 15);
+                } else {
+                    e.hp -= 300;
+                    createExplosion(e.x, e.y, '#ff416c', 25);
+                }
+            });
+        }
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.fillStyle = Math.random() < 0.5 ? '#ff9900' : '#ff3300';
+        ctx.beginPath();
+        ctx.moveTo(-6, this.height / 2);
+        ctx.lineTo(0, this.height / 2 + 15 + Math.random() * 8);
+        ctx.lineTo(6, this.height / 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#00f0ff';
+        ctx.beginPath();
+        ctx.moveTo(0, -this.height / 2);
+        ctx.lineTo(this.width / 2, this.height / 2);
+        ctx.lineTo(0, this.height / 4);
+        ctx.lineTo(-this.width / 2, this.height / 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, -2, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (this.shield) {
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.width, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.15)';
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
+class Bullet {
+    constructor(x, y, vx, vy, isPlayer = false, damage = 10) {
+        this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+        this.radius = isPlayer ? 3.5 : 4;
+        this.isPlayer = isPlayer; this.damage = damage;
+        this.color = isPlayer ? '#00ffff' : '#ff3366';
+    }
+    update() { this.x += this.vx; this.y += this.vy; }
+    draw() {
+        ctx.save();
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 6; ctx.shadowColor = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+class Enemy {
+    constructor(type = 'basic', bossHp = 1200, bossColor = '#ffbb00') {
+        this.type = type;
+        this.markedForDeletion = false;
+        this.shootTimer = Math.floor(Math.random() * 40);
+
+        if (type === 'basic') {
+            this.width = 30; this.height = 30;
+            this.x = Math.random() * (gameWidth - this.width) + this.width / 2;
+            this.y = -this.height; this.speedY = Math.random() * 1.5 + 2.0; this.speedX = 0;
+            this.hp = 12; this.coins = 12; this.color = '#ff4444';
+        } else if (type === 'chaser') {
+            this.width = 28; this.height = 28;
+            this.x = Math.random() * (gameWidth - this.width) + this.width / 2;
+            this.y = -this.height; this.speedY = 2.2; this.speedX = 0;
+            this.hp = 22; this.coins = 25; this.color = '#ff00ff';
+        } else if (type === 'elite') {
+            this.width = 44; this.height = 44;
+            this.x = Math.random() * (gameWidth - this.width) + this.width / 2;
+            this.y = -this.height; this.speedY = 1.2; this.speedX = (Math.random() - 0.5) * 2;
+            this.hp = 65; this.coins = 60; this.color = '#00ffaa';
+        } else if (type === 'boss') {
+            this.width = 120; this.height = 90;
+            this.x = gameWidth / 2; this.y = -this.height;
+            this.speedY = 1; this.speedX = 2.5;
+            this.hp = bossHp; this.maxHp = bossHp;
+            this.coins = currentDungeon.reward; this.color = bossColor;
+        }
+    }
+
+    update() {
+        this.shootTimer++;
+        if (this.type === 'basic') {
+            this.y += this.speedY;
+            if (this.shootTimer % 70 === 0 && this.y > 0 && this.y < gameHeight - 80) {
+                const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                enemyBullets.push(new Bullet(this.x, this.y + 10, Math.cos(angle) * 4.2, Math.sin(angle) * 4.2));
+            }
+        } else if (this.type === 'chaser') {
+            this.y += this.speedY;
+            if (player && this.y < player.y) {
+                if (this.x < player.x) this.x += 1.3; else if (this.x > player.x) this.x -= 1.3;
+            }
+            if (this.shootTimer % 60 === 0 && this.y > 0 && this.y < gameHeight - 80) {
+                enemyBullets.push(new Bullet(this.x - 8, this.y + 10, -1.2, 4.5));
+                enemyBullets.push(new Bullet(this.x + 8, this.y + 10, 1.2, 4.5));
+            }
+        } else if (this.type === 'elite') {
+            this.y += this.speedY; this.x += this.speedX;
+            if (this.x - this.width/2 < 0 || this.x + this.width/2 > gameWidth) this.speedX *= -1;
+            if (this.shootTimer % 55 === 0 && this.y > 0 && this.y < gameHeight - 80) {
+                enemyBullets.push(new Bullet(this.x - 10, this.y + 15, -1.8, 4.2));
+                enemyBullets.push(new Bullet(this.x, this.y + 15, 0, 4.8));
+                enemyBullets.push(new Bullet(this.x + 10, this.y + 15, 1.8, 4.2));
+            }
+        } else if (this.type === 'boss') {
+            if (this.y < 90) {
+                this.y += this.speedY;
+            } else {
+                this.x += this.speedX;
+                if (this.x - this.width / 2 < 10 || this.x + this.width / 2 > gameWidth - 10) this.speedX *= -1;
+                if (this.shootTimer % 22 === 0) {
+                    const angles = [-0.8, -0.4, 0, 0.4, 0.8];
+                    angles.forEach(ang => {
+                        enemyBullets.push(new Bullet(this.x + Math.sin(ang) * 25, this.y + this.height / 2, Math.sin(ang) * 5.5, Math.cos(ang) * 5.5));
+                    });
+                }
+            }
+        }
+        if (this.y > gameHeight + 50) this.markedForDeletion = true;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        if (this.type === 'boss') {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.moveTo(0, this.height / 2);
+            ctx.lineTo(this.width / 2, -this.height / 4);
+            ctx.lineTo(this.width / 3, -this.height / 2);
+            ctx.lineTo(-this.width / 3, -this.height / 2);
+            ctx.lineTo(-this.width / 2, -this.height / 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+            ctx.fillRect(-this.width / 2, -this.height / 2 - 15, this.width, 8);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(-this.width / 2, -this.height / 2 - 15, (this.width) * (Math.max(0, this.hp) / this.maxHp), 8);
+        } else if (this.type === 'elite') {
+            ctx.fillStyle = this.color;
+            ctx.beginPath(); ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(-this.width / 4, -2, this.width / 2, 4);
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.moveTo(0, this.height / 2);
+            ctx.lineTo(-this.width / 2, -this.height / 2);
+            ctx.lineTo(0, -this.height / 4);
+            ctx.lineTo(this.width / 2, -this.height / 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
+class Powerup {
+    constructor(x, y) {
+        this.x = x; this.y = y; this.size = 20; this.speedY = 1.8;
+        this.markedForDeletion = false;
+        const types = ['triple', 'shield', 'bomb', 'heal'];
+        this.type = types[Math.floor(Math.random() * types.length)];
+    }
+    update() { this.y += this.speedY; if (this.y > gameHeight + 20) this.markedForDeletion = true; }
+    draw() {
+        ctx.save(); ctx.translate(this.x, this.y);
+        let icon = '🎁';
+        if (this.type === 'triple') icon = '🔫';
+        if (this.type === 'shield') icon = '🛡️';
+        if (this.type === 'bomb') icon = '💣';
+        if (this.type === 'heal') icon = '💖';
+        ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(icon, 0, 0); ctx.restore();
+    }
+}
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y; this.color = color;
+        this.radius = Math.random() * 3 + 1;
+        this.vx = (Math.random() - 0.5) * 8; this.vy = (Math.random() - 0.5) * 8;
+        this.alpha = 1; this.decay = Math.random() * 0.03 + 0.015;
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.alpha -= this.decay; }
+    draw() {
+        ctx.save(); ctx.globalAlpha = Math.max(0, this.alpha);
+        ctx.fillStyle = this.color; ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+}
+
+function createExplosion(x, y, color = '#ff5500', count = 12) {
+    for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
+}
+
+function checkCollision(r1, r2) {
+    return (
+        r1.x - r1.width / 2 < r2.x + r2.width / 2 &&
+        r1.x + r1.width / 2 > r2.x - r2.width / 2 &&
+        r1.y - r1.height / 2 < r2.y + r2.height / 2 &&
+        r1.y + r1.height / 2 > r2.y - r2.height / 2
+    );
+}
+
+function checkCircleCollision(circle, rect) {
+    const distX = Math.abs(circle.x - rect.x), distY = Math.abs(circle.y - rect.y);
+    if (distX > (rect.width / 2 + circle.radius) || distY > (rect.height / 2 + circle.radius)) return false;
+    if (distX <= (rect.width / 2) || distY <= (rect.height / 2)) return true;
+    const dx = distX - rect.width / 2, dy = distY - rect.height / 2;
+    return (dx * dx + dy * dy <= (circle.radius * circle.radius));
+}
+
+function updateGame(dt) {
+    frameCount++;
+    stars.forEach(s => s.update());
+    player.update(dt);
+
+    if (!bossSpawned && killsCount >= currentDungeon.targetKill) {
+        bossSpawned = true;
+        enemies.push(new Enemy('boss', currentDungeon.bossHp, currentDungeon.bossColor));
+    } else if (!bossSpawned && frameCount % 38 === 0) {
+        const rand = Math.random();
+        if (rand < 0.5) enemies.push(new Enemy('basic'));
+        else if (rand < 0.8) enemies.push(new Enemy('chaser'));
+        else enemies.push(new Enemy('elite'));
+    }
+
+    bullets.forEach((b, i) => { b.update(); if (b.y < -10) bullets.splice(i, 1); });
+
+    enemyBullets.forEach((b, i) => {
+        b.update();
+        if (b.y > gameHeight + 10 || b.x < -10 || b.x > gameWidth + 10) { enemyBullets.splice(i, 1); return; }
+        if (checkCircleCollision(b, player)) {
+            enemyBullets.splice(i, 1);
+            if (!player.shield) {
+                player.hp -= 12; shakeTime = 10;
+                createExplosion(player.x, player.y, '#00ffff', 8);
+                if (player.hp <= 0) finishGame(false);
+            }
+        }
+    });
+
+    enemies.forEach((enemy) => {
+        enemy.update();
+        bullets.forEach((bullet, bIndex) => {
+            if (checkCircleCollision(bullet, enemy)) {
+                bullets.splice(bIndex, 1);
+                enemy.hp -= bullet.damage;
+                createExplosion(bullet.x, bullet.y, '#ffff00', 4);
+
+                if (enemy.hp <= 0 && !enemy.markedForDeletion) {
+                    enemy.markedForDeletion = true;
+                    sounds.playExplosion(enemy.type === 'boss');
+                    createExplosion(enemy.x, enemy.y, enemy.color, enemy.type === 'boss' ? 40 : 12);
+                    earnedCoinsThisRun += enemy.coins;
+
+                    if (enemy.type === 'boss') {
+                        finishGame(true);
+                    } else {
+                        killsCount++;
+                        const dropChance = enemy.type === 'elite' ? 0.45 : 0.2;
+                        if (Math.random() < dropChance) powerups.push(new Powerup(enemy.x, enemy.y));
+                    }
+                }
+            }
+        });
+
+        if (checkCollision(player, enemy)) {
+            if (!player.shield) {
+                player.hp -= 25; shakeTime = 15;
+                if (player.hp <= 0) finishGame(false);
+            }
+            if (enemy.type !== 'boss') {
+                enemy.markedForDeletion = true;
+                createExplosion(enemy.x, enemy.y, enemy.color, 15);
+            }
+        }
+    });
+
+    enemies = enemies.filter(e => !e.markedForDeletion);
+
+    powerups.forEach((p, pIndex) => {
+        p.update();
+        if (checkCollision(player, { x: p.x, y: p.y, width: p.size, height: p.size })) {
+            sounds.playPowerup();
+            if (p.type === 'triple') player.tripleShotTimer = 8000;
+            if (p.type === 'shield') { player.shield = true; player.shieldTimer = player.shieldMaxDur; }
+            if (p.type === 'bomb') { player.bombs++; document.getElementById('bomb-count').textContent = player.bombs; }
+            if (p.type === 'heal') player.hp = Math.min(player.maxHp, player.hp + 40);
+            powerups.splice(pIndex, 1);
+        }
+    });
+    powerups = powerups.filter(p => !p.markedForDeletion);
+
+    particles.forEach((p, i) => { p.update(); if (p.alpha <= 0) particles.splice(i, 1); });
+    if (shakeTime > 0) shakeTime--;
+}
+
+function drawGame() {
+    ctx.clearRect(0, 0, gameWidth, gameHeight); ctx.save();
+    if (shakeTime > 0) ctx.translate((Math.random() - 0.5) * shakeTime, (Math.random() - 0.5) * shakeTime);
+
+    stars.forEach(s => s.draw());
+    powerups.forEach(p => p.draw());
+    bullets.forEach(b => b.draw());
+    enemyBullets.forEach(b => b.draw());
+    enemies.forEach(e => e.draw());
+    if (player.hp > 0) player.draw();
+    particles.forEach(p => p.draw());
+    ctx.restore();
+
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(`副本: ${currentDungeon.name.split('：')[0]}`, 15, 25);
+    ctx.fillText(`🪙 獲得金幣: ${earnedCoinsThisRun}`, 15, 45);
+
+    if (!bossSpawned) {
+        ctx.fillText(`擊殺進度: ${killsCount}/${currentDungeon.targetKill}`, 15, 65);
+    } else {
+        ctx.fillStyle = '#ff0055'; ctx.fillText(`⚠️ 警告：BOSS 戰鬥中！`, 15, 65);
+    }
+
+    const barW = 140, barH = 10, barX = gameWidth - 155, barY = 15;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = player.hp > player.maxHp * 0.3 ? '#00ff88' : '#ff3300';
+    ctx.fillRect(barX, barY, Math.max(0, (player.hp / player.maxHp) * barW), barH);
+    ctx.strokeStyle = '#fff';
+    ctx.strokeRect(barX, barY, barW, barH);
+}
+
+function gameLoop(timestamp) {
+    if (!gameRunning) return;
+    const dt = timestamp - lastTime || 16;
+    lastTime = timestamp;
+    updateGame(dt); drawGame();
+    requestAnimationFrame(gameLoop);
+}
+
+function startDungeon(dungeon) {
+    sounds.init();
+    currentDungeon = dungeon; killsCount = 0; bossSpawned = false;
+    earnedCoinsThisRun = 0; frameCount = 0; shakeTime = 0;
+    player = new Player(); bullets = []; enemyBullets = []; enemies = []; particles = []; powerups = [];
+    stars = Array.from({ length: 50 }, () => new Star());
+
+    document.getElementById('bomb-count').textContent = player.bombs;
+    document.getElementById('dungeon-menu').classList.add('hidden');
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('bomb-btn').classList.remove('hidden');
+
+    gameRunning = true; lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+}
+
+function finishGame(isVictory) {
+    gameRunning = false;
+    document.getElementById('bomb-btn').classList.add('hidden');
+    saveData.coins += earnedCoinsThisRun;
+    
+    if (isVictory) {
+        document.getElementById('result-title').textContent = "🎉 副本通關成功！";
+        document.getElementById('result-title').style.color = "#00ff88";
+        document.getElementById('result-desc').textContent = `成功擊垮 ${currentDungeon.name}`;
+        if (currentDungeon.id >= saveData.unlockedDungeon && saveData.unlockedDungeon < DUNGEONS.length) {
+            saveData.unlockedDungeon = currentDungeon.id + 1;
+        }
+    } else {
+        document.getElementById('result-title').textContent = "💥 任務失敗";
+        document.getElementById('result-title').style.color = "#ff3366";
+        document.getElementById('result-desc').textContent = "戰機毀損，撤退回基地";
+    }
+
+    document.getElementById('earned-coins').textContent = earnedCoinsThisRun;
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    
+    // 結算時即時寫入 localStorage 存檔
+    saveToLocalStorage(false);
+}
+
+function updateUI() {
+    document.getElementById('menu-coins').textContent = saveData.coins;
+    document.getElementById('upgrade-coins').textContent = saveData.coins;
+
+    const dungeonList = document.getElementById('dungeon-list');
+    dungeonList.innerHTML = '';
+    DUNGEONS.forEach(d => {
+        const isUnlocked = d.id <= saveData.unlockedDungeon;
+        const card = document.createElement('div');
+        card.className = `dungeon-card ${isUnlocked ? '' : 'locked'}`;
+        card.innerHTML = `
+            <div>
+                <div style="font-weight:bold; color: #00f0ff;">${d.name}</div>
+                <div style="font-size: 0.75rem; color: #a0a0c0;">${d.desc}</div>
+                <div style="font-size: 0.75rem; color: #ffd700;">通關獎勵: ~${d.reward} 金幣</div>
+            </div>
+            <button class="btn btn-small ${isUnlocked ? 'btn-green' : ''}" ${isUnlocked ? '' : 'disabled'}>
+                ${isUnlocked ? '挑戰' : '未解鎖'}
+            </button>
+        `;
+        if (isUnlocked) card.querySelector('button').addEventListener('click', () => startDungeon(d));
+        dungeonList.appendChild(card);
+    });
+
+    const upgradeList = document.getElementById('upgrade-list');
+    upgradeList.innerHTML = '';
+    const upgradeConfigs = [
+        { key: 'attack', name: '主砲攻擊力', desc: '提升戰機基本發射傷害', costBase: 100 },
+        { key: 'fireRate', name: '發射射速', desc: '縮短子彈發射間隔時間', costBase: 120 },
+        { key: 'hp', name: '裝甲血量上限', desc: '提升戰機最大生命值', costBase: 80 },
+        { key: 'shieldDur', name: '防護盾持續時間', desc: '延長能量護盾持續秒數', costBase: 150 }
+    ];
+
+    upgradeConfigs.forEach(cfg => {
+        const lvl = saveData.upgrades[cfg.key];
+        const cost = cfg.costBase * lvl;
+        const row = document.createElement('div');
+        row.className = 'upgrade-row';
+        row.innerHTML = `
+            <div class="upgrade-info">
+                <div class="upgrade-title">${cfg.name} (Lv.${lvl})</div>
+                <div class="upgrade-desc">${cfg.desc}</div>
+            </div>
+            <button class="btn btn-small" ${saveData.coins >= cost ? '' : 'disabled'}>
+                🪙 ${cost} 升級
+            </button>
+        `;
+        row.querySelector('button').addEventListener('click', () => {
+            if (saveData.coins >= cost) {
+                saveData.coins -= cost;
+                saveData.upgrades[cfg.key]++;
+                saveToLocalStorage(false);
+                updateUI();
+            }
+        });
+        upgradeList.appendChild(row);
+    });
+}
+
+let isPointerDown = false;
+function updatePlayerPosition(e) {
+    if (!gameRunning || !player) return;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    player.x = Math.max(player.width / 2, Math.min(gameWidth - player.width / 2, clientX - rect.left));
+    player.y = Math.max(player.height / 2, Math.min(gameHeight - player.height / 2, clientY - rect.top - 25));
+}
+
+canvas.addEventListener('mousedown', (e) => { isPointerDown = true; updatePlayerPosition(e); });
+canvas.addEventListener('mousemove', (e) => { if (isPointerDown) updatePlayerPosition(e); });
+window.addEventListener('mouseup', () => isPointerDown = false);
+canvas.addEventListener('touchstart', (e) => { isPointerDown = true; updatePlayerPosition(e); });
+canvas.addEventListener('touchmove', (e) => { if (isPointerDown) updatePlayerPosition(e); });
+window.addEventListener('touchend', () => isPointerDown = false);
+
+window.addEventListener('keydown', e => {
+    if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+    if ((e.key === 'b' || e.key === 'B') && gameRunning) player.useBomb();
+});
+window.addEventListener('keyup', e => { if (keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+
+document.getElementById('btn-open-dungeons').addEventListener('click', () => {
+    updateUI(); document.getElementById('main-menu').classList.add('hidden'); document.getElementById('dungeon-menu').classList.remove('hidden');
+});
+document.getElementById('btn-close-dungeons').addEventListener('click', () => {
+    document.getElementById('dungeon-menu').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden');
+});
+document.getElementById('btn-open-upgrades').addEventListener('click', () => {
+    updateUI(); document.getElementById('main-menu').classList.add('hidden'); document.getElementById('upgrade-menu').classList.remove('hidden');
+});
+document.getElementById('btn-close-upgrades').addEventListener('click', () => {
+    document.getElementById('upgrade-menu').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden');
+});
+document.getElementById('btn-save-game').addEventListener('click', () => saveToLocalStorage(true));
+document.getElementById('btn-reset-game').addEventListener('click', resetLocalStorage);
+document.getElementById('btn-restart').addEventListener('click', () => startDungeon(currentDungeon));
+document.getElementById('btn-return-menu').addEventListener('click', () => {
+    updateUI(); document.getElementById('game-over-screen').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden');
+});
+document.getElementById('bomb-btn').addEventListener('click', () => { if (gameRunning) player.useBomb(); });
+
+// 初始化並讀取 localStorage 存檔
+loadFromLocalStorage();
+updateUI();
+
+</script>
+</body>
+</html>
