@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>無名的流浪貓 - Nameless Stray Cat</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0f19;
+            font-family: 'Courier New', Courier, monospace, sans-serif;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 900px;
+            max-height: 500px;
+            aspect-ratio: 16 / 9;
+            background: #0f1726;
+            box-shadow: 0 0 40px rgba(56, 189, 148, 0.35);
+            border: 3px solid #38bd94;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(15, 23, 38, 0.92);
+            backdrop-filter: blur(6px);
+            z-index: 10;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.2s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #ffffff;
+            text-shadow: 3px 3px 0px #1d5c52, 0 0 15px rgba(56, 189, 148, 0.8);
+            margin-bottom: 4px;
+            text-align: center;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        h2 {
+            font-size: 1.6rem;
+            color: #ffffff;
+            text-shadow: 2px 2px 0px #1d5c52;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle-bar {
+            background: #1b263b;
+            color: #79ebd2;
+            padding: 4px 16px;
+            font-size: 0.85rem;
+            letter-spacing: 3px;
+            border: 1px solid #38bd94;
+            margin-bottom: 16px;
+            font-weight: bold;
+        }
+
+        p {
+            font-size: 0.9rem;
+            color: #a4f3d6;
+            margin-bottom: 16px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #0f1726;
+            background: #79ebd2;
+            border: 2px solid #ffffff;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px #1d5c52;
+            transition: all 0.1s ease;
+            outline: none;
+            margin: 4px;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 4px 4px 0px #1d5c52;
+            background: #a4f3d6;
+        }
+
+        .btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #1d5c52;
+        }
+
+        .btn-green {
+            background: #38bd94;
+            color: #ffffff;
+            box-shadow: 3px 3px 0px #0e3d33;
+        }
+
+        .btn-red {
+            background: #e74c3c;
+            color: #ffffff;
+            box-shadow: 3px 3px 0px #7b241c;
+        }
+
+        .btn-small {
+            padding: 5px 12px;
+            font-size: 0.8rem;
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 500px;
+            background: #1b263b;
+            border: 2px solid #38bd94;
+            border-radius: 8px;
+            padding: 12px 18px;
+            margin-bottom: 12px;
+            max-height: 55vh;
+            overflow-y: auto;
+        }
+
+        .upgrade-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(56, 189, 148, 0.3);
+            gap: 10px;
+        }
+
+        .upgrade-title { font-size: 0.9rem; font-weight: bold; color: #ffffff; }
+        .upgrade-desc { font-size: 0.75rem; color: #a4f3d6; }
+
+        .currency-display {
+            font-size: 1.05rem;
+            color: #79ebd2;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .touch-controls {
+            position: absolute;
+            bottom: 15px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 25px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .touch-group {
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+        }
+
+        .touch-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 6px;
+            background: rgba(27, 38, 59, 0.7);
+            border: 2px solid #38bd94;
+            color: #79ebd2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.3rem;
+            font-weight: bold;
+            box-shadow: 2px 2px 0px #0e3d33;
+        }
+
+        .touch-btn:active {
+            background: #38bd94;
+            color: #0f1726;
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0px #0e3d33;
+        }
+
+        .touch-btn-action {
+            width: 58px;
+            height: 58px;
+            border-color: #79ebd2;
+            color: #79ebd2;
+        }
+
+        .toast {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #79ebd2;
+            color: #0f1726;
+            padding: 6px 18px;
+            border: 2px solid #ffffff;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            font-weight: bold;
+            z-index: 20;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 30;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <a class="back-link btn btn-small" href="/">← 返回入口</a>
+    <canvas id="gameCanvas"></canvas>
+    <div id="toast" class="toast">進度已儲存！</div>
+
+    <div id="touch-ui" class="touch-controls hidden">
+        <div class="touch-group">
+            <div class="touch-btn" id="btn-left">◀️</div>
+            <div class="touch-btn" id="btn-right">▶️</div>
+        </div>
+        <div class="touch-group">
+            <div class="touch-btn touch-btn-action" id="btn-orb">✦</div>
+            <div class="touch-btn touch-btn-action" id="btn-jump">▲</div>
+        </div>
+    </div>
+
+    <div id="main-menu" class="overlay">
+        <h1>無名的流浪貓</h1>
+        <div class="subtitle-bar">A PIXEL ADVENTURE</div>
+        <div class="currency-display">
+            ✦ 像素光之魂: <span id="menu-orbs">0</span>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+            <button class="btn btn-green" id="btn-start-game">開始冒險</button>
+            <button class="btn" id="btn-open-shop">靈魂祭壇</button>
+        </div>
+        <button class="btn btn-red btn-small" id="btn-reset-data" style="margin-top: 12px;">重置存檔</button>
+        <p style="font-size: 0.72rem; margin-top: 14px; color: #79ebd2;">
+            電腦操作：A / D 移動，J / W 跳躍，K / Space 發射與傳送光珠<br>
+            手機操作：左手點擊 ◀️ / ▶️ 移動，右手點擊 ▲ 跳躍、✦ 發射/傳送
+        </p>
+    </div>
+
+    <div id="shop-menu" class="overlay hidden">
+        <h2>靈魂祭壇</h2>
+        <div class="currency-display">
+            ✦ 像素光之魂: <span id="shop-orbs">0</span>
+        </div>
+        <div class="panel" id="upgrade-list"></div>
+        <button class="btn" id="btn-close-shop">返回主選單</button>
+    </div>
+
+    <div id="game-over-screen" class="overlay hidden">
+        <h1 id="result-title">迷失在深淵</h1>
+        <p id="result-desc">流浪貓觸碰到了致命陷阱...</p>
+        <div class="currency-display">本次獲得: +<span id="earned-orbs">0</span> ✦</div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+            <button class="btn btn-green" id="btn-restart">再次嘗試</button>
+            <button class="btn" id="btn-return-menu">返回大廳</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'NAMELESS_CAT_PIXEL_ART_SAVE_V4';
+const defaultSave = { orbs: 0, currentLevel: 1, upgrades: { orbCooldown: 1, extraJump: 1, shield: 1 } };
+let saveData = { ...defaultSave };
+function loadSave() { try { const local = localStorage.getItem(STORAGE_KEY); if (local) saveData = JSON.parse(local); else saveData = JSON.parse(JSON.stringify(defaultSave)); } catch (e) { saveData = JSON.parse(JSON.stringify(defaultSave)); } }
+function saveGame() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); } catch (e) { console.error('存檔失敗', e); } }
+function resetGameData() { if (confirm('確定要重置所有靈魂數量與升級能力嗎？')) { localStorage.removeItem(STORAGE_KEY); saveData = JSON.parse(JSON.stringify(defaultSave)); saveGame(); updateUI(); showToast('存檔已重置！'); } }
+function showToast(txt) { const t = document.getElementById('toast'); t.textContent = txt; t.style.opacity = '1'; setTimeout(() => { t.style.opacity = '0'; }, 2000); }
+class SoundFx { constructor() { this.ctx = null; } init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } playJump() { if (!this.ctx) return; const osc = this.ctx.createOscillator(), g = this.ctx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(250, this.ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.08); g.gain.setValueAtTime(0.08, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08); osc.connect(g); g.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime + 0.08); } playShootOrb() { if (!this.ctx) return; const osc = this.ctx.createOscillator(), g = this.ctx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(800, this.ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.12); g.gain.setValueAtTime(0.1, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12); osc.connect(g); g.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime + 0.12); } playTeleport() { if (!this.ctx) return; const osc = this.ctx.createOscillator(), g = this.ctx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(400, this.ctx.currentTime); osc.frequency.linearRampToValueAtTime(950, this.ctx.currentTime + 0.18); g.gain.setValueAtTime(0.12, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.18); osc.connect(g); g.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime + 0.18); } playCollect() { if (!this.ctx) return; const osc = this.ctx.createOscillator(), g = this.ctx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(700, this.ctx.currentTime); osc.frequency.setValueAtTime(1100, this.ctx.currentTime + 0.06); g.gain.setValueAtTime(0.08, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12); osc.connect(g); g.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime + 0.12); } playDie() { if (!this.ctx) return; const osc = this.ctx.createOscillator(), g = this.ctx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, this.ctx.currentTime); osc.frequency.linearRampToValueAtTime(60, this.ctx.currentTime + 0.22); g.gain.setValueAtTime(0.12, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.22); osc.connect(g); g.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime + 0.22); } }
+const sound = new SoundFx(); const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d'); const GAME_WIDTH = 800; const GAME_HEIGHT = 450; let gameRunning = false; let currentLevelIdx = 0; let earnedOrbsThisRun = 0; let globalAnimTimer = 0; const keys = { left: false, right: false, jump: false, orb: false }; let player; let teleportOrb = null; let platforms = []; let spikes = []; let collectibles = []; let portal = null; let particles = []; let bgStars = []; function initCanvas() { canvas.width = GAME_WIDTH; canvas.height = GAME_HEIGHT; bgStars = []; for (let i = 0; i < 40; i++) { bgStars.push({ x: Math.random() * GAME_WIDTH, y: Math.random() * GAME_HEIGHT * 0.7, size: Math.random() < 0.3 ? 3 : 2, blinkSpeed: Math.random() * 0.05 + 0.01 }); } } initCanvas();
+class Cat { constructor(x, y) { this.x = x; this.y = y; this.width = 24; this.height = 20; this.vx = 0; this.vy = 0; this.speed = 3.8; this.gravity = 0.48; this.jumpForce = -9.8; this.isGrounded = false; this.facing = 1; this.walkFrame = 0; this.maxJumps = saveData.upgrades.extraJump > 1 ? 2 : 1; this.jumpsLeft = this.maxJumps; this.shieldsLeft = saveData.upgrades.shield - 1; } update() { if (keys.left) { this.vx = -this.speed; this.facing = -1; this.walkFrame += 0.2; } else if (keys.right) { this.vx = this.speed; this.facing = 1; this.walkFrame += 0.2; } else { this.vx *= 0.72; this.walkFrame = 0; } this.vy += this.gravity; this.x += this.vx; platforms.forEach(p => { if (checkAABB(this, p)) { if (this.vx > 0) this.x = p.x - this.width; else if (this.vx < 0) this.x = p.x + p.width; } }); this.y += this.vy; this.isGrounded = false; platforms.forEach(p => { if (checkAABB(this, p)) { if (this.vy > 0) { this.y = p.y - this.height; this.vy = 0; this.isGrounded = true; this.jumpsLeft = this.maxJumps; } else if (this.vy < 0) { this.y = p.y + p.height; this.vy = 0; } } }); if (this.x < 0) this.x = 0; if (this.x > GAME_WIDTH - this.width) this.x = GAME_WIDTH - this.width; if (this.y > GAME_HEIGHT + 50) handlePlayerDeath('掉入無盡深淵'); } jump() { if (this.jumpsLeft > 0) { this.vy = this.jumpForce; this.jumpsLeft--; sound.playJump(); createParticles(this.x + this.width/2, this.y + this.height, '#79ebd2', 6); } } draw() { ctx.save(); ctx.translate(Math.floor(this.x + this.width/2), Math.floor(this.y + this.height/2)); if (this.facing === -1) ctx.scale(-1, 1); if (this.shieldsLeft > 0) { ctx.strokeStyle = '#79ebd2'; ctx.lineWidth = 2; ctx.strokeRect(-16, -14, 32, 28); } ctx.fillStyle = '#162b2e'; ctx.fillRect(-10, -5, 20, 13); ctx.fillRect(-9, -11, 5, 6); ctx.fillRect(4, -11, 5, 6); ctx.fillStyle = '#79ebd2'; ctx.fillRect(2, -3, 3, 3); ctx.fillRect(6, -3, 3, 3); ctx.fillStyle = '#162b2e'; ctx.fillRect(-13, -2, 4, 3); ctx.fillRect(-14, -5, 3, 3); const step = Math.sin(this.walkFrame) > 0 ? 2 : 0; ctx.fillStyle = '#79ebd2'; ctx.fillRect(-6 + step, 8, 4, 3); ctx.fillRect(2 - step, 8, 4, 3); ctx.restore(); } }
+class TeleportOrb { constructor(x, y, dirX, dirY) { this.x = x; this.y = y; this.radius = 5; const speed = 9.5; this.vx = dirX * speed; this.vy = dirY * speed; this.isStopped = false; this.active = true; } update() { if (!this.active) return; if (!this.isStopped) { this.x += this.vx; this.y += this.vy; if (globalAnimTimer % 2 === 0) createParticles(this.x, this.y, '#79ebd2', 2); for (let p of platforms) { if (this.x + this.radius > p.x && this.x - this.radius < p.x + p.width && this.y + this.radius > p.y && this.y - this.radius < p.y + p.height) { this.isStopped = true; this.vx = 0; this.vy = 0; createParticles(this.x, this.y, '#ffffff', 10); break; } } } } draw() { if (!this.active) return; ctx.save(); ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.floor(this.x - 4), Math.floor(this.y - 4), 8, 8); ctx.fillStyle = '#79ebd2'; ctx.fillRect(Math.floor(this.x - 2), Math.floor(this.y - 2), 4, 4); ctx.restore(); } }
+class Platform { constructor(x, y, w, h, isMoving = false, moveRange = 0) { this.x = x; this.y = y; this.width = w; this.height = h; this.isMoving = isMoving; this.startX = x; this.moveRange = moveRange; this.speed = 1.5; this.dir = 1; } update() { if (this.isMoving) { this.x += this.speed * this.dir; if (this.x > this.startX + this.moveRange || this.x < this.startX) this.dir *= -1; } } draw() { ctx.save(); const px = Math.floor(this.x), py = Math.floor(this.y), pw = Math.floor(this.width), ph = Math.floor(this.height); ctx.fillStyle = '#1d5c52'; ctx.fillRect(px, py, pw, ph); ctx.fillStyle = '#ffffff'; ctx.fillRect(px, py, pw, Math.min(8, ph)); ctx.fillStyle = '#79ebd2'; const tileSize = 16; for (let x = px; x < px + pw; x += tileSize) { ctx.beginPath(); ctx.moveTo(x, py + 8); ctx.lineTo(x + tileSize/2, py + 16); ctx.lineTo(x + tileSize, py + 8); ctx.fill(); } ctx.fillStyle = '#34495e'; for (let x = px + 4; x < px + pw - 12; x += 32) { if (py + 20 < py + ph) ctx.fillRect(x, py + 18, 12, 6); } ctx.restore(); } }
+class Spike { constructor(x, y, w = 24, h = 24) { this.x = x; this.y = y; this.width = w; this.height = h; } draw() { ctx.save(); const px = Math.floor(this.x), py = Math.floor(this.y); ctx.fillStyle = '#79ebd2'; ctx.fillRect(px + 8, py, 8, 24); ctx.fillRect(px, py + 8, 24, 8); ctx.fillStyle = '#ffffff'; ctx.fillRect(px + 10, py + 2, 4, 20); ctx.fillRect(px + 2, py + 10, 20, 4); ctx.restore(); } }
+class Collectible { constructor(x, y) { this.x = x; this.y = y; this.radius = 6; this.collected = false; this.floatOffset = Math.random() * 10; } update() { this.floatOffset += 0.05; } draw() { if (this.collected) return; ctx.save(); const px = Math.floor(this.x), py = Math.floor(this.y + Math.sin(this.floatOffset) * 3); ctx.fillStyle = '#ffffff'; ctx.fillRect(px - 5, py - 5, 10, 10); ctx.fillStyle = '#79ebd2'; ctx.fillRect(px - 3, py - 3, 6, 6); ctx.restore(); } }
+class Portal { constructor(x, y) { this.x = x; this.y = y; this.radius = 20; this.angle = 0; } update() { this.angle += 0.05; } draw() { ctx.save(); ctx.translate(Math.floor(this.x), Math.floor(this.y)); ctx.fillStyle = '#ffffff'; ctx.fillRect(-12, -18, 24, 36); ctx.fillStyle = '#79ebd2'; ctx.fillRect(-8, -14, 16, 28); ctx.fillStyle = '#0f1726'; ctx.fillRect(-4, -10, 8, 20); ctx.restore(); } }
+class Particle { constructor(x, y, color) { this.x = x; this.y = y; this.color = color; this.radius = Math.random() * 2 + 1; this.vx = (Math.random() - 0.5) * 4; this.vy = (Math.random() - 0.5) * 4; this.alpha = 1; this.decay = 0.04; } update() { this.x += this.vx; this.y += this.vy; this.alpha -= this.decay; } draw() { ctx.save(); ctx.globalAlpha = Math.max(0, this.alpha); ctx.fillStyle = this.color; ctx.fillRect(Math.floor(this.x), Math.floor(this.y), Math.floor(this.radius * 2), Math.floor(this.radius * 2)); ctx.restore(); } }
+function createParticles(x, y, color, count = 8) { for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color)); }
+function checkAABB(r1, r2) { return (r1.x < r2.x + r2.width && r1.x + r1.width > r2.x && r1.y < r2.y + r2.height && r1.y + r1.height > r2.y); }
+const LEVELS = [{ playerStart: { x: 40, y: 320 }, portal: { x: 740, y: 150 }, platforms: [new Platform(0, 370, 220, 80), new Platform(280, 310, 140, 30), new Platform(480, 230, 140, 30), new Platform(680, 180, 120, 30), new Platform(0, 0, 20, 450), new Platform(780, 0, 20, 450)], spikes: [new Spike(220, 346, 24, 24), new Spike(420, 286, 24, 24)], orbs: [new Collectible(340, 260), new Collectible(540, 180)] }, { playerStart: { x: 40, y: 320 }, portal: { x: 730, y: 300 }, platforms: [new Platform(0, 370, 140, 80), new Platform(180, 300, 90, 25), new Platform(320, 240, 110, 25, true, 120), new Platform(600, 200, 80, 25), new Platform(680, 350, 100, 40), new Platform(0, 0, 20, 450), new Platform(780, 0, 20, 450)], spikes: [new Spike(140, 346, 24, 24), new Spike(440, 346, 24, 24)], orbs: [new Collectible(220, 250), new Collectible(380, 180), new Collectible(640, 150)] }, { playerStart: { x: 40, y: 320 }, portal: { x: 730, y: 100 }, platforms: [new Platform(0, 370, 120, 80), new Platform(200, 180, 30, 270), new Platform(320, 330, 100, 25), new Platform(480, 250, 100, 25), new Platform(660, 150, 120, 25), new Platform(0, 0, 20, 450), new Platform(780, 0, 20, 450)], spikes: [new Spike(120, 346, 24, 24), new Spike(230, 346, 24, 24)], orbs: [new Collectible(215, 120), new Collectible(370, 280), new Collectible(530, 200)] }];
+function loadLevel(idx) { const lvl = LEVELS[idx]; player = new Cat(lvl.playerStart.x, lvl.playerStart.y); portal = new Portal(lvl.portal.x, lvl.portal.y); platforms = lvl.platforms; spikes = lvl.spikes; collectibles = lvl.orbs.map(o => new Collectible(o.x, o.y)); teleportOrb = null; particles = []; }
+function handleOrbAction() { if (!gameRunning) return; if (!teleportOrb || !teleportOrb.active) { const dirX = player.facing; const dirY = keys.jump ? -0.6 : 0; teleportOrb = new TeleportOrb(player.x + player.width/2, player.y + player.height/2, dirX, dirY); sound.playShootOrb(); } else { createParticles(player.x + player.width/2, player.y + player.height/2, '#79ebd2', 12); player.x = teleportOrb.x - player.width/2; player.y = teleportOrb.y - player.height/2; player.vy = -2; sound.playTeleport(); createParticles(player.x + player.width/2, player.y + player.height/2, '#ffffff', 12); teleportOrb.active = false; } }
+function handlePlayerDeath(reason = '觸碰到致命陷阱') { if (player.shieldsLeft > 0) { player.shieldsLeft--; player.vy = -6; sound.playDie(); createParticles(player.x + player.width/2, player.y + player.height/2, '#79ebd2', 15); return; } gameRunning = false; sound.playDie(); saveData.orbs += earnedOrbsThisRun; saveGame(); document.getElementById('result-title').textContent = '迷失在遺跡'; document.getElementById('result-desc').textContent = reason; document.getElementById('earned-orbs').textContent = earnedOrbsThisRun; document.getElementById('touch-ui').classList.add('hidden'); document.getElementById('game-over-screen').classList.remove('hidden'); }
+function updateGame() { globalAnimTimer++; player.update(); platforms.forEach(p => p.update()); if (teleportOrb) teleportOrb.update(); if (portal) portal.update(); collectibles.forEach(c => { c.update(); if (!c.collected) { const dist = Math.hypot((player.x + player.width/2) - c.x, (player.y + player.height/2) - c.y); if (dist < player.width/2 + c.radius) { c.collected = true; earnedOrbsThisRun++; sound.playCollect(); createParticles(c.x, c.y, '#79ebd2', 10); } } }); spikes.forEach(s => { if (checkAABB(player, s)) handlePlayerDeath('觸碰到十字石碑針'); }); if (portal) { const distToPortal = Math.hypot((player.x + player.width/2) - portal.x, (player.y + player.height/2) - portal.y); if (distToPortal < portal.radius) { if (currentLevelIdx < LEVELS.length - 1) { currentLevelIdx++; loadLevel(currentLevelIdx); showToast(`進入第 ${currentLevelIdx + 1} 區域`); } else { gameRunning = false; saveData.orbs += earnedOrbsThisRun; saveGame(); document.getElementById('result-title').textContent = '🎉 成功找到回家之路！'; document.getElementById('result-desc').textContent = '無名的貓順利穿越了所有像素遺跡！'; document.getElementById('earned-orbs').textContent = earnedOrbsThisRun; document.getElementById('touch-ui').classList.add('hidden'); document.getElementById('game-over-screen').classList.remove('hidden'); } } } particles.forEach((p, i) => { p.update(); if (p.alpha <= 0) particles.splice(i, 1); }); }
+function drawGame() { ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT); const skyGrad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT); skyGrad.addColorStop(0, '#090e1a'); skyGrad.addColorStop(1, '#152238'); ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT); bgStars.forEach(s => { ctx.fillStyle = '#ffffff'; ctx.globalAlpha = Math.abs(Math.sin(globalAnimTimer * s.blinkSpeed + s.x)) * 0.7 + 0.3; ctx.fillRect(Math.floor(s.x), Math.floor(s.y), s.size, s.size); }); ctx.globalAlpha = 1; ctx.fillStyle = '#101a2b'; ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT); ctx.lineTo(0, 300); ctx.lineTo(160, 220); ctx.lineTo(350, 310); ctx.lineTo(520, 190); ctx.lineTo(700, 280); ctx.lineTo(GAME_WIDTH, 200); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT); ctx.fill(); platforms.forEach(p => p.draw()); spikes.forEach(s => s.draw()); collectibles.forEach(c => c.draw()); if (portal) portal.draw(); if (teleportOrb) teleportOrb.draw(); player.draw(); particles.forEach(p => p.draw()); ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "Courier New", monospace'; ctx.textAlign = 'left'; ctx.fillText(`STAGE: ${currentLevelIdx + 1} / ${LEVELS.length}`, 15, 25); ctx.fillText(`✦ ORBS: ${earnedOrbsThisRun}`, 15, 45); }
+function gameLoop() { if (!gameRunning) return; updateGame(); drawGame(); requestAnimationFrame(gameLoop); }
+function startGame() { sound.init(); loadSave(); currentLevelIdx = 0; earnedOrbsThisRun = 0; loadLevel(currentLevelIdx); document.getElementById('main-menu').classList.add('hidden'); document.getElementById('shop-menu').classList.add('hidden'); document.getElementById('game-over-screen').classList.add('hidden'); document.getElementById('touch-ui').classList.remove('hidden'); gameRunning = true; requestAnimationFrame(gameLoop); }
+function updateUI() { document.getElementById('menu-orbs').textContent = saveData.orbs; document.getElementById('shop-orbs').textContent = saveData.orbs; const shopList = document.getElementById('upgrade-list'); shopList.innerHTML = ''; const configs = [{ key: 'extraJump', name: '輕靈二段跳', desc: '解鎖在空中額外跳躍一次的能力', cost: 5, max: 2 }, { key: 'shield', name: '靈魂護盾', desc: '抵擋一次致命陷阱撞擊', cost: 8, max: 3 }]; configs.forEach(cfg => { const lvl = saveData.upgrades[cfg.key]; const isMax = lvl >= cfg.max; const cost = cfg.cost * lvl; const row = document.createElement('div'); row.className = 'upgrade-row'; row.innerHTML = `<div class="upgrade-info"><div class="upgrade-title">${cfg.name} (${isMax ? 'MAX' : 'Lv.' + lvl})</div><div class="upgrade-desc">${cfg.desc}</div></div><button class="btn btn-small" ${isMax || saveData.orbs < cost ? 'disabled' : ''}>${isMax ? '已滿級' : '✦ ' + cost + ' 升級'}</button>`; if (!isMax) { row.querySelector('button').addEventListener('click', () => { if (saveData.orbs >= cost) { saveData.orbs -= cost; saveData.upgrades[cfg.key]++; saveGame(); updateUI(); showToast('能力升級成功！'); } }); } shopList.appendChild(row); }); }
+window.addEventListener('keydown', e => { if (!gameRunning) return; if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.left = true; if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.right = true; if (e.key === 'w' || e.key === 'W' || e.key === 'j' || e.key === 'J' || e.key === 'ArrowUp') { if (!keys.jump) player.jump(); keys.jump = true; } if (e.key === ' ' || e.key === 'k' || e.key === 'K' || e.key === 'l' || e.key === 'L') handleOrbAction(); });
+window.addEventListener('keyup', e => { if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.left = false; if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.right = false; if (e.key === 'w' || e.key === 'W' || e.key === 'j' || e.key === 'J' || e.key === 'ArrowUp') keys.jump = false; });
+const bindTouch = (id, onDown, onUp) => { const el = document.getElementById(id); el.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive: false }); el.addEventListener('touchend', e => { e.preventDefault(); if (onUp) onUp(); }, { passive: false }); };
+bindTouch('btn-left', () => keys.left = true, () => keys.left = false); bindTouch('btn-right', () => keys.right = true, () => keys.right = false); bindTouch('btn-jump', () => { if (player) player.jump(); keys.jump = true; }, () => keys.jump = false); bindTouch('btn-orb', () => handleOrbAction());
+document.getElementById('btn-start-game').addEventListener('click', startGame); document.getElementById('btn-restart').addEventListener('click', startGame); document.getElementById('btn-open-shop').addEventListener('click', () => { updateUI(); document.getElementById('main-menu').classList.add('hidden'); document.getElementById('shop-menu').classList.remove('hidden'); }); document.getElementById('btn-close-shop').addEventListener('click', () => { document.getElementById('shop-menu').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden'); }); document.getElementById('btn-return-menu').addEventListener('click', () => { updateUI(); document.getElementById('game-over-screen').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden'); }); document.getElementById('btn-reset-data').addEventListener('click', resetGameData);
+loadSave(); updateUI();
+</script>
+</body>
+</html>

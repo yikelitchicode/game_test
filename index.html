@@ -3,29 +3,106 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>game_test</title>
+    <title>game_test | Multi-game Portal</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="wrap">
-      <section class="panel">
-        <div>
-          <p class="eyebrow">Mini browser game</p>
+    <main class="page">
+      <section class="hero panel">
+        <div class="hero-copy">
+          <p class="eyebrow">Multi-game portal</p>
           <h1>game_test</h1>
-          <p class="desc">Use ← → or A / D to dodge falling blocks. Survive as long as you can.</p>
+          <p class="desc">
+            A growing mini-game hub. The current dodge game is now Game 1, and more games can be plugged into this homepage over time.
+          </p>
         </div>
-        <div class="hud">
-          <div><span>Score</span><strong id="score">0</strong></div>
-          <div><span>Best</span><strong id="best">0</strong></div>
-          <div><span>Status</span><strong id="status">Ready</strong></div>
+        <div class="hero-meta">
+          <div><span>Games live</span><strong>2</strong></div>
+          <div><span>Coming next</span><strong>1 slot</strong></div>
+          <div><span>Platform</span><strong>Web / Mobile</strong></div>
         </div>
-        <button id="startBtn">Start / Restart</button>
       </section>
-      <section class="game-shell">
-        <canvas id="game" width="420" height="640"></canvas>
-        <p class="hint">Tip: mobile also supports touching left / right half of the canvas.</p>
+
+      <section class="portal-grid">
+        <aside class="panel game-list-panel">
+          <div class="section-head">
+            <p class="eyebrow">Game Library</p>
+            <h2>Choose a game</h2>
+          </div>
+
+          <div class="game-list">
+            <button class="game-card active" data-game="dodge" type="button">
+              <span class="game-card-top">
+                <span class="game-badge live">Live</span>
+                <span class="game-no">Game 1</span>
+              </span>
+              <strong>Sky Dodge</strong>
+              <small>Dodge falling blocks and survive as long as possible.</small>
+            </button>
+
+            <button class="game-card" data-game="game-2" type="button">
+              <span class="game-card-top">
+                <span class="game-badge live">Live</span>
+                <span class="game-no">Game 2</span>
+              </span>
+              <strong>無名的流浪貓</strong>
+              <small>像素風冒險平台遊戲，支援跳躍、光珠傳送與升級。</small>
+            </button>
+
+            <button class="game-card coming-soon" data-game="coming-3" type="button">
+              <span class="game-card-top">
+                <span class="game-badge soon">Soon</span>
+                <span class="game-no">Game 3</span>
+              </span>
+              <strong>Coming Soon</strong>
+              <small>Another slot ready for expansion.</small>
+            </button>
+          </div>
+        </aside>
+
+        <section class="viewer">
+          <article class="panel game-panel active" data-panel="dodge">
+            <div class="game-panel-header">
+              <div>
+                <p class="eyebrow">Featured game</p>
+                <h2>Game 1 · Sky Dodge</h2>
+                <p class="desc">Use ← → or A / D to dodge falling blocks. On mobile, touch the left or right half of the game area.</p>
+              </div>
+              <div class="hud">
+                <div><span>Score</span><strong id="score">0</strong></div>
+                <div><span>Best</span><strong id="best">0</strong></div>
+                <div><span>Status</span><strong id="status">Ready</strong></div>
+              </div>
+            </div>
+
+            <div class="game-actions">
+              <button id="startBtn" class="primary-btn" type="button">Start / Restart</button>
+            </div>
+
+            <div class="game-shell">
+              <canvas id="game" width="420" height="640"></canvas>
+              <p class="hint">Tip: the live game stays inside the portal, so future games can reuse the same homepage pattern.</p>
+            </div>
+          </article>
+
+          <article class="panel game-panel placeholder-panel" data-panel="game-2" hidden>
+            <p class="eyebrow">Game 2</p>
+            <h2>無名的流浪貓</h2>
+            <p class="desc">像素風流浪貓冒險。你可以直接開新頁遊玩完整版本，保留原本的獨立存檔與操作。</p>
+            <div class="game-actions">
+              <a class="primary-btn link-btn" href="/game-2/">Play Game 2</a>
+            </div>
+          </article>
+
+          <article class="panel game-panel placeholder-panel" data-panel="coming-3" hidden>
+            <p class="eyebrow">Game 3</p>
+            <h2>Reserved slot</h2>
+            <p class="desc">Another future game slot. We can add a puzzle, clicker, shooter, runner, or anything else later.</p>
+          </article>
+        </section>
       </section>
     </main>
+
     <script src="app.js"></script>
   </body>
 </html>
