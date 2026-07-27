@@ -4,6 +4,8 @@ const scoreEl = document.getElementById('score');
 const bestEl = document.getElementById('best');
 const statusEl = document.getElementById('status');
 const startBtn = document.getElementById('startBtn');
+const gameCards = [...document.querySelectorAll('.game-card')];
+const gamePanels = [...document.querySelectorAll('.game-panel')];
 
 const W = canvas.width;
 const H = canvas.height;
@@ -16,10 +18,28 @@ let best = Number(localStorage.getItem('game_test_best') || 0);
 let running = false;
 let gameOver = false;
 let frame = 0;
+let activePanel = 'dodge';
 
 bestEl.textContent = String(best);
 
+function setPanel(panelName) {
+  activePanel = panelName;
+
+  gameCards.forEach((card) => {
+    card.classList.toggle('active', card.dataset.game === panelName);
+  });
+
+  gamePanels.forEach((panel) => {
+    const isActive = panel.dataset.panel === panelName;
+    panel.hidden = !isActive;
+    panel.classList.toggle('active', isActive);
+  });
+
+  statusEl.textContent = panelName === 'dodge' ? (running ? 'Playing' : gameOver ? 'Game Over' : 'Ready') : 'Browsing';
+}
+
 function reset() {
+  setPanel('dodge');
   player.x = W / 2 - player.w / 2;
   obstacles = [];
   score = 0;
@@ -46,7 +66,7 @@ function rectHit(a, b) {
 }
 
 function update() {
-  if (!running) return;
+  if (!running || activePanel !== 'dodge') return;
 
   if (keys.left) player.x -= player.speed;
   if (keys.right) player.x += player.speed;
@@ -145,25 +165,44 @@ function tick() {
 }
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') keys.left = true;
-  if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') keys.right = true;
+  const key = e.key.toLowerCase();
+  if (e.key === 'ArrowLeft' || key === 'a') keys.left = true;
+  if (e.key === 'ArrowRight' || key === 'd') keys.right = true;
 });
+
 window.addEventListener('keyup', (e) => {
-  if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') keys.left = false;
-  if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') keys.right = false;
+  const key = e.key.toLowerCase();
+  if (e.key === 'ArrowLeft' || key === 'a') keys.left = false;
+  if (e.key === 'ArrowRight' || key === 'd') keys.right = false;
 });
+
 canvas.addEventListener('touchstart', (e) => {
+  if (activePanel !== 'dodge') return;
   const touch = e.touches[0];
   const rect = canvas.getBoundingClientRect();
   const x = touch.clientX - rect.left;
   keys.left = x < rect.width / 2;
   keys.right = !keys.left;
 }, { passive: true });
+
 canvas.addEventListener('touchend', () => {
   keys.left = false;
   keys.right = false;
 });
+
 startBtn.addEventListener('click', reset);
+
+gameCards.forEach((card) => {
+  card.addEventListener('click', () => {
+    setPanel(card.dataset.game);
+  });
+});
+
+setPanel('dodge');
+
+if (window.location.hash === '#game-2') {
+  setPanel('game-2');
+}
 
 render();
 tick();
