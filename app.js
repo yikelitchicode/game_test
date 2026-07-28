@@ -131,7 +131,7 @@ function drawPlayer() {
 
 function drawObstacles() {
   obstacles.forEach((o) => {
-    ctx.fillStyle = '#fb7185';
+    ctx.fillStyle = '#fb7185' ;
     ctx.beginPath();
     ctx.roundRect(o.x, o.y, o.w, o.h, 8);
     ctx.fill();
