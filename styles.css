@@ -72,6 +72,8 @@ body {
 .ship::before { content: ""; position: absolute; width: 12px; height: 21px; left: 12px; top: 15px; border-radius: 50%; background: #4bbce4; }.ship i { position: absolute; left: 14px; bottom: -8px; width: 8px; height: 20px; background: #f0b548; }
 
 .puzzle-icon { display: grid; place-items: center; background: #f4a83a; color: #fff8e7; font-family: "Avenir Next", sans-serif; font-size: 21px; font-weight: 900; text-shadow: 0 2px rgba(127, 63, 24, .25); }
+.snake-icon { background: #dff1c8; }.snake-body { position:absolute; width:49px; height:36px; left:13px; top:21px; border:11px solid #4d9c4b; border-left-color:transparent; border-radius:50%; transform:rotate(-23deg); }.snake-eye { position:absolute; width:8px; height:8px; right:13px; top:25px; border-radius:50%; background:#203d25; box-shadow:-4px 12px #203d25; }
+.dino-icon { background:#9bd7e9; }.dino-head { position:absolute; width:38px; height:33px; left:16px; top:19px; border-radius:12px 16px 7px 8px; background:#4f7451; }.dino-head::after { content:""; position:absolute; width:7px; height:7px; right:7px; top:7px; border-radius:50%; background:#fff; box-shadow:2px 1px #273f2a; }.dino-leg { position:absolute; left:24px; top:46px; width:24px; height:17px; border-left:7px solid #4f7451; border-bottom:7px solid #4f7451; }.cactus { position:absolute; right:8px; bottom:9px; width:7px; height:24px; border-radius:5px; background:#367751; box-shadow:-5px 8px #367751, 5px 13px #367751; }
 
 .dock { position: fixed; left: 50%; bottom: max(13px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 18px; padding: 11px 19px; border: 1px solid rgba(255,255,255,.34); border-radius: 27px; background: rgba(239, 248, 249, .27); box-shadow: 0 12px 32px rgba(5,29,45,.18); backdrop-filter: blur(18px); }
 .dock-icon { width: 58px; height: 58px; border-radius: 14px; }.dock-icon .cell-large { width: 39px; height: 39px; left: 9px; top: 11px; }.dock-icon .cell-small { width: 17px; height: 17px; }.dock-icon .cat-ear { top: 7px; }.dock-icon .cat-face { left: 7px; bottom: 5px; transform: scale(.85); transform-origin: bottom left; }.dock-icon .ship { transform: scale(.73); transform-origin: top left; left: 17px; top: 9px; }
@@ -80,4 +82,16 @@ body {
 @media (max-width: 540px) {
   .app-grid { grid-template-columns: repeat(4, 62px); gap: 22px 17px; padding-left: 16px; padding-right: 16px; }
   .app-icon { width: 62px; height: 62px; border-radius: 15px; }.app-icon .cell-large { transform: scale(.8); transform-origin: top left; left: 10px; top: 11px; }.app-icon .cell-small { transform: scale(.75); transform-origin: top right; }.app-icon .cell-tiny { transform: scale(.8); }.app-icon .cat-ear { transform: scale(.78); transform-origin: top; top: 8px; }.app-icon .cat-face { transform: scale(.78); transform-origin: bottom left; left: 10px; bottom: 7px; }.app-icon .ship { transform: scale(.78); transform-origin: top left; left: 17px; top: 8px; }
+}
+
+@media (max-width: 400px) {
+  .dock { gap: 10px; padding: 9px 10px; }
+}
+
+@media (max-width: 340px) {
+  .app-grid { grid-template-columns: repeat(4, 58px); column-gap: 12px; }
+  .app-icon { width: 58px; height: 58px; }
+  .app-icon .cell-large { transform: scale(.73); }
+  .app-icon .cat-face { transform: scale(.72); }
+  .app-icon .ship { transform: scale(.72); }
 }

@@ -8,6 +8,8 @@ A small multi-game portal for browser mini-games.
 - **Game 2:** 無名的流浪貓 (`/game-2/`)
 - **Game 3:** 星際戰機：深空獵手 (`/game-3/`)
 - **Game 4:** 2048 (`/game-4/`)
+- **Game 5:** Snake (`/game-5/`)
+- **Game 6:** Dino Run (`/game-6/`)
 
 The repo acts as a multi-game portal. Each game opens as an independent page: Cell Clash is Game 1, the pixel-art cat adventure is Game 2, and the space shooter is Game 3.
 
