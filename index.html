@@ -1,111 +1,42 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>game_test | Multi-game Portal</title>
+    <title>game_test</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="page">
-      <section class="hero panel">
-        <div class="hero-copy">
-          <p class="eyebrow">Multi-game portal</p>
-          <h1>game_test</h1>
-          <p class="desc">
-            A growing mini-game hub. The current dodge game is now Game 1, and more games can be plugged into this homepage over time.
-          </p>
+    <main class="phone-home" aria-label="Game launcher">
+      <div class="wallpaper-shape shape-one" aria-hidden="true"></div>
+      <div class="wallpaper-shape shape-two" aria-hidden="true"></div>
+      <div class="wallpaper-shape shape-three" aria-hidden="true"></div>
+
+      <nav class="app-grid" aria-label="Games">
+        <div class="app-entry">
+          <a class="app-icon cell-icon" href="/game-1/" aria-label="Play Cell Clash" title="Cell Clash"><span class="cell cell-large"></span><span class="cell cell-small"></span><span class="cell cell-tiny"></span></a>
+          <span class="app-label">Cell Clash</span>
         </div>
-        <div class="hero-meta">
-          <div><span>Games live</span><strong>3</strong></div>
-          <div><span>Coming next</span><strong>0 slots</strong></div>
-          <div><span>Platform</span><strong>Web / Mobile</strong></div>
+        <div class="app-entry">
+          <a class="app-icon cat-icon" href="/game-2/" aria-label="Play the cat adventure" title="無名的流浪貓"><span class="cat-ear left"></span><span class="cat-ear right"></span><span class="cat-face"><i></i><i></i><b></b></span></a>
+          <span class="app-label">流浪貓</span>
         </div>
-      </section>
+        <div class="app-entry">
+          <a class="app-icon ship-icon" href="/game-3/" aria-label="Play Deep Space Hunter" title="星際戰機：深空獵手"><span class="star star-a"></span><span class="star star-b"></span><span class="star star-c"></span><span class="ship"><i></i></span></a>
+          <span class="app-label">深空獵手</span>
+        </div>
+        <div class="app-entry">
+          <a class="app-icon puzzle-icon" href="/game-4/" aria-label="Play 2048" title="2048"><span>2048</span></a>
+          <span class="app-label">2048</span>
+        </div>
+      </nav>
 
-      <section class="portal-grid">
-        <aside class="panel game-list-panel">
-          <div class="section-head">
-            <p class="eyebrow">Game Library</p>
-            <h2>Choose a game</h2>
-          </div>
-
-          <div class="game-list">
-            <button class="game-card active" data-game="dodge" type="button">
-              <span class="game-card-top">
-                <span class="game-badge live">Live</span>
-                <span class="game-no">Game 1</span>
-              </span>
-              <strong>Sky Dodge</strong>
-              <small>Dodge falling blocks and survive as long as possible.</small>
-            </button>
-
-            <button class="game-card" data-game="game-2" type="button">
-              <span class="game-card-top">
-                <span class="game-badge live">Live</span>
-                <span class="game-no">Game 2</span>
-              </span>
-              <strong>無名的流浪貓</strong>
-              <small>像素風冒險平台遊戲，支援跳躍、光珠傳送與升級。</small>
-            </button>
-
-            <button class="game-card" data-game="game-3" type="button">
-              <span class="game-card-top">
-                <span class="game-badge live">Live</span>
-                <span class="game-no">Game 3</span>
-              </span>
-              <strong>星際戰機：深空獵手</strong>
-              <small>從目前 main 保留下來的直向太空射擊遊戲版本。</small>
-            </button>
-          </div>
-        </aside>
-
-        <section class="viewer">
-          <article class="panel game-panel active" data-panel="dodge">
-            <div class="game-panel-header">
-              <div>
-                <p class="eyebrow">Featured game</p>
-                <h2>Game 1 · Sky Dodge</h2>
-                <p class="desc">Use ← → or A / D to dodge falling blocks. On mobile, touch the left or right half of the game area.</p>
-              </div>
-              <div class="hud">
-                <div><span>Score</span><strong id="score">0</strong></div>
-                <div><span>Best</span><strong id="best">0</strong></div>
-                <div><span>Status</span><strong id="status">Ready</strong></div>
-              </div>
-            </div>
-
-            <div class="game-actions">
-              <button id="startBtn" class="primary-btn" type="button">Start / Restart</button>
-            </div>
-
-            <div class="game-shell">
-              <canvas id="game" width="420" height="640"></canvas>
-              <p class="hint">Tip: the live game stays inside the portal, so future games can reuse the same homepage pattern.</p>
-            </div>
-          </article>
-
-          <article class="panel game-panel placeholder-panel" data-panel="game-2" hidden>
-            <p class="eyebrow">Game 2</p>
-            <h2>無名的流浪貓</h2>
-            <p class="desc">像素風流浪貓冒險。你可以直接開新頁遊玩完整版本，保留原本的獨立存檔與操作。</p>
-            <div class="game-actions">
-              <a class="primary-btn link-btn" href="/game-2/">Play Game 2</a>
-            </div>
-          </article>
-
-          <article class="panel game-panel placeholder-panel" data-panel="game-3" hidden>
-            <p class="eyebrow">Game 3</p>
-            <h2>星際戰機：深空獵手</h2>
-            <p class="desc">把目前 origin/main 上的完整太空射擊版本保留下來，避免合併時被入口頁覆蓋。</p>
-            <div class="game-actions">
-              <a class="primary-btn link-btn" href="/game-3/">Play Game 3</a>
-            </div>
-          </article>
-        </section>
-      </section>
+      <footer class="dock" aria-label="Quick launch">
+        <a class="dock-icon cell-icon" href="/game-1/" aria-label="Play Cell Clash" title="Cell Clash"><span class="cell cell-large"></span><span class="cell cell-small"></span></a>
+        <a class="dock-icon cat-icon" href="/game-2/" aria-label="Play the cat adventure" title="無名的流浪貓"><span class="cat-ear left"></span><span class="cat-ear right"></span><span class="cat-face"><i></i><i></i><b></b></span></a>
+        <a class="dock-icon ship-icon" href="/game-3/" aria-label="Play Deep Space Hunter" title="星際戰機：深空獵手"><span class="ship"><i></i></span></a>
+        <a class="dock-icon puzzle-icon" href="/game-4/" aria-label="Play 2048" title="2048"><span>2048</span></a>
+      </footer>
     </main>
-
-    <script src="app.js"></script>
   </body>
 </html>

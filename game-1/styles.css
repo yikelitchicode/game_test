@@ -1,0 +1,98 @@
+:root {
+  --ink: #15212b;
+  --muted: #62717c;
+  --lime: #92d935;
+  --paper: #f7f8f4;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  color: var(--ink);
+  font-family: "Trebuchet MS", "Avenir Next", sans-serif;
+  background: #e9eeea;
+}
+
+button, input { font: inherit; }
+
+.game-page { min-height: 100vh; position: relative; }
+
+.topbar {
+  position: fixed;
+  z-index: 4;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 58px;
+  padding: 0 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, .88);
+  border-bottom: 1px solid rgba(21, 33, 43, .12);
+  backdrop-filter: blur(10px);
+}
+
+.brand { color: var(--ink); text-decoration: none; font-size: 18px; font-weight: 900; letter-spacing: 0; }
+.brand span { color: #6b7880; font-weight: 600; }
+.stats { display: flex; gap: 18px; color: var(--muted); font-size: 14px; }
+.stats strong { color: var(--ink); }
+
+.arena-wrap { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: none; }
+
+.leaderboard {
+  position: fixed;
+  z-index: 3;
+  top: 82px;
+  right: 22px;
+  width: 190px;
+  padding: 14px 16px 12px;
+  background: rgba(255, 255, 255, .9);
+  border: 1px solid rgba(21, 33, 43, .13);
+  box-shadow: 0 8px 26px rgba(37, 61, 46, .12);
+}
+.leaderboard p { margin: 0 0 9px; font-size: 12px; color: var(--muted); font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.leaderboard ol { margin: 0; padding-left: 24px; }
+.leaderboard li { padding: 3px 0; color: #38464e; font-size: 13px; }
+.leaderboard li.you { color: #2586be; font-weight: 900; }
+
+.start-screen, .game-over {
+  position: fixed;
+  z-index: 5;
+  top: 50%; left: 50%;
+  width: min(390px, calc(100vw - 40px));
+  transform: translate(-50%, -50%);
+  padding: 34px;
+  text-align: center;
+  background: rgba(255, 255, 255, .96);
+  border: 1px solid rgba(21, 33, 43, .14);
+  box-shadow: 0 18px 55px rgba(21, 52, 37, .21);
+}
+.kicker { margin: 0 0 7px; color: #68a91e; font-size: 12px; font-weight: 900; letter-spacing: .12em; }
+h1, h2 { margin: 0; font-weight: 900; letter-spacing: 0; }
+h1 { font-size: 48px; }
+h2 { font-size: 29px; }
+.start-screen > p:not(.kicker) { color: var(--muted); margin: 10px 0 24px; }
+label { display: block; text-align: left; }
+label span { display: block; margin: 0 0 7px; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+input { width: 100%; padding: 12px 13px; color: var(--ink); border: 1px solid #c9d1cc; outline-color: #81c935; }
+button { width: 100%; margin-top: 12px; padding: 13px; cursor: pointer; border: 0; color: #173105; background: var(--lime); font-weight: 900; }
+button:hover { background: #a5e64c; }
+small { display: block; margin-top: 18px; color: var(--muted); font-size: 12px; }
+.game-over { padding: 30px; }
+.game-over button { margin-top: 20px; }
+[hidden] { display: none !important; }
+.crosshair { position: fixed; z-index: 2; width: 18px; height: 18px; border: 2px solid rgba(30, 43, 49, .48); border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); }
+
+@media (max-width: 640px) {
+  .topbar { padding: 0 14px; height: 50px; }
+  .brand { font-size: 15px; }
+  .stats { gap: 10px; font-size: 12px; }
+  .leaderboard { top: 64px; right: 12px; width: 145px; padding: 10px 12px; }
+  .leaderboard li { font-size: 11px; }
+  h1 { font-size: 40px; }
+}

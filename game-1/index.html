@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cell Clash | Game 1</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-page">
+      <header class="topbar">
+        <a class="brand" href="/">game_test <span>/ Cell Clash</span></a>
+        <div class="stats" aria-label="Game stats">
+          <span>Mass <strong id="mass">0</strong></span>
+          <span>Best <strong id="best">0</strong></span>
+        </div>
+      </header>
+
+      <section class="arena-wrap" aria-label="Cell Clash game area">
+        <canvas id="arena" width="1400" height="860"></canvas>
+        <aside class="leaderboard">
+          <p>Leaderboard</p>
+          <ol id="leaderboard"></ol>
+        </aside>
+        <div class="crosshair" aria-hidden="true"></div>
+        <section class="start-screen" id="startScreen">
+          <p class="kicker">GAME 1</p>
+          <h1>Cell Clash</h1>
+          <p>Eat, grow, and outlast the petri dish.</p>
+          <label>
+            <span>Cell name</span>
+            <input id="nameInput" type="text" maxlength="14" value="Player" autocomplete="off" />
+          </label>
+          <button id="playButton" type="button">Play</button>
+          <small>Move toward your cursor or touch position</small>
+        </section>
+        <section class="game-over" id="gameOver" hidden>
+          <p class="kicker">CELL ABSORBED</p>
+          <h2 id="finalMass">Mass 0</h2>
+          <button id="againButton" type="button">Play again</button>
+        </section>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
