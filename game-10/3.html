@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>Hades 2 HTML5 Demo (Phaser 3)</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #08060a; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    #game-container { position: relative; width: 1024px; height: 576px; box-shadow: 0 0 30px rgba(138, 43, 226, 0.3); border: 2px solid #3a3245; }
+
+    /* Hades 2 神恩 UI 覆蓋層 */
+    #boon-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle, rgba(16, 12, 26, 0.85) 0%, rgba(4, 3, 8, 0.98) 100%);
+      display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+    .god-title { color: #20b2aa; font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; text-shadow: 0 0 10px rgba(32, 178, 170, 0.6); }
+    .main-title { color: #f6e69f; font-size: 2.2rem; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.5); margin-bottom: 30px; }
+    .boons-container { display: flex; gap: 20px; }
+    .boon-card {
+      width: 260px; height: 360px; background: rgba(12, 10, 18, 0.95); border: 2px solid #3a3245; border-radius: 8px;
+      padding: 20px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer;
+      transition: all 0.25s ease; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    }
+    .boon-card:hover { transform: translateY(-8px) scale(1.02); border-color: #d4af37; box-shadow: 0 0 20px rgba(32, 178, 170, 0.5); }
+    .boon-slot { font-size: 0.8rem; color: #8a8296; text-transform: uppercase; }
+    .boon-rarity { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; }
+    .rarity-epic { color: #a335ee; } .rarity-rare { color: #4a90e2; } .rarity-common { color: #a0a0a0; }
+    .boon-name { font-size: 1.3rem; color: #fff; font-weight: bold; margin-bottom: 10px; }
+    .boon-desc { font-size: 0.9rem; color: #c4becc; line-height: 1.4; flex-grow: 1; }
+    .highlight { color: #f6e69f; font-weight: bold; }
+    .select-btn { padding: 8px; background: rgba(212, 175, 55, 0.1); border: 1px solid #d4af37; color: #f6e69f; text-align: center; border-radius: 4px; font-size: 0.85rem; }
+    .boon-card:hover .select-btn { background: #d4af37; color: #000; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <!-- UI 彈窗 -->
+    <div id="boon-overlay">
+      <div class="god-title">◆ APOLLO ◆</div>
+      <div class="main-title">太陽神阿波羅的祝福</div>
+      <div class="boons-container" id="boonsContainer"></div>
+    </div>
+  </div>
+
+<script>
+// ===================================================
+// 1. 遊戲資料與神恩邏輯 Engine
+// ===================================================
+const playerStats = {
+  hp: 100, maxHp: 100,
+  mana: 100, maxMana: 100,
+  speed: 180,
+  attackDamage: 25,
+  attackRadius: 40,
+  castRadius: 90,
+  boons: { attack: null, cast: null, sprint: null }
+};
+
+const apolloBoonsPool = [
+  {
+    id: "apollo_attack", slot: "attack", slotName: "【普通攻擊】", name: "熾耀耀擊", rarity: "epic", rarityText: "Epic 史詩",
+    desc: "普攻範圍擴大 <span class='highlight'>+50%</span>，傷害提升 <span class='highlight'>+40%</span>",
+    apply: () => { playerStats.attackRadius *= 1.5; playerStats.attackDamage *= 1.4; }
+  },
+  {
+    id: "apollo_cast", slot: "cast", slotName: "【魔法陣】", name: "日輪法陣", rarity: "rare", rarityText: "Rare 稀有",
+    desc: "法陣範圍擴大 <span class='highlight'>+40%</span>，且持續時間延長",
+    apply: () => { playerStats.castRadius *= 1.4; }
+  },
+  {
+    id: "apollo_sprint", slot: "sprint", slotName: "【衝刺】", name: "炫光奔襲", rarity: "common", rarityText: "Common 普通",
+    desc: "移動與衝刺速度增加 <span class='highlight'>+30%</span>",
+    apply: () => { playerStats.speed *= 1.3; }
+  }
+];
+
+// ===================================================
+// 2. Phaser 3 遊戲場景
+// ===================================================
+class MainScene extends Phaser.Scene {
+  constructor() {
+    super('MainScene');
+    this.enemies = [];
+    this.casts = [];
+    this.wave = 1;
+  }
+
+  create() {
+    // 繪製網格背景 (模擬地下城地板)
+    const grid = this.add.grid(512, 288, 1024, 576, 64, 64, 0x120f1d, 1, 0x231c33, 1);
+    
+    // 玩家實體 (墨利諾厄 - 綠色圓球)
+    this.player = this.physics.add.sprite(512, 288, null);
+    this.playerCircle = this.add.circle(0, 0, 16, 0x20b2aa);
+    this.playerGlow = this.add.circle(0, 0, 22, 0x20b2aa, 0.3);
+    this.playerContainer = this.add.container(512, 288, [this.playerGlow, this.playerCircle]);
+    this.physics.world.enable(this.playerContainer);
+    this.playerContainer.body.setCollideWorldBounds(true);
+    this.playerContainer.body.setCircle(16, -16, -16);
+
+    // 輸入監聽
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keyW = this.input.keyboard.addKey('W');
+    this.keyA = this.input.keyboard.addKey('A');
+    this.keyS = this.input.keyboard.addKey('S');
+    this.keyD = this.input.keyboard.addKey('D');
+    this.keyCast = this.input.keyboard.addKey('E');
+    this.keyDash = this.input.keyboard.addKey('SPACE');
+
+    // 攻擊監聽 (滑鼠左鍵)
+    this.input.on('pointerdown', (pointer) => {
+      if (pointer.leftButtonDown() && !this.isPaused) this.performAttack(pointer);
+    });
+
+    // 繪製 UI (HP / Mana)
+    this.createUI();
+
+    // 生成第一波敵人
+    this.spawnEnemyWave();
+
+    // 提示文字
+    this.add.text(16, 545, '操作：[WASD] 移動 | [Space] 衝刺 | [左鍵] 攻擊 | [E] 釋放法陣', { fontSize: '13px', color: '#8a8296' });
+  }
+
+  createUI() {
+    this.hpBarBg = this.add.rectangle(120, 25, 200, 16, 0x2a2233).setOrigin(0, 0.5);
+    this.hpBar = this.add.rectangle(120, 25, 200, 16, 0xe74c3c).setOrigin(0, 0.5);
+    this.manaBarBg = this.add.rectangle(120, 48, 200, 12, 0x2a2233).setOrigin(0, 0.5);
+    this.manaBar = this.add.rectangle(120, 48, 200, 12, 0x3498db).setOrigin(0, 0.5);
+
+    this.add.text(20, 25, 'HP', { fontSize: '14px', color: '#e74c3c', fontStyle: 'bold' }).setOrigin(0, 0.5);
+    this.add.text(20, 48, 'MANA', { fontSize: '12px', color: '#3498db', fontStyle: 'bold' }).setOrigin(0, 0.5);
+    
+    this.waveText = this.add.text(980, 25, `WAVE ${this.wave}`, { fontSize: '18px', color: '#f6e69f', fontStyle: 'bold' }).setOrigin(1, 0.5);
+  }
+
+  update(time, delta) {
+    if (this.isPaused) return;
+
+    // 1. Mana 自然回覆
+    if (playerStats.mana < playerStats.maxMana) {
+      playerStats.mana = Math.min(playerStats.maxMana, playerStats.mana + 0.15);
+      this.updateUI();
+    }
+
+    // 2. 玩家移動與 Dash 處理
+    let moveX = 0, moveY = 0;
+    if (this.keyA.isDown || this.cursors.left.isDown) moveX -= 1;
+    if (this.keyD.isDown || this.cursors.right.isDown) moveX += 1;
+    if (this.keyW.isDown || this.cursors.up.isDown) moveY -= 1;
+    if (this.keyS.isDown || this.cursors.down.isDown) moveY += 1;
+
+    let speed = playerStats.speed;
+    if (Phaser.Input.Keyboard.JustDown(this.keyDash)) {
+      speed *= 3.5; // Dash 瞬間爆發速度
+      this.tweens.add({ targets: this.playerGlow, scale: 2, alpha: 0, duration: 200, yoyo: true });
+    }
+
+    const vec = new Phaser.Math.Vector2(moveX, moveY).normalize().scale(speed);
+    this.playerContainer.body.setVelocity(vec.x, vec.y);
+
+    // 3. 釋放 Cast 法陣 (E 鍵)
+    if (Phaser.Input.Keyboard.JustDown(this.keyCast) && playerStats.mana >= 20) {
+      playerStats.mana -= 20;
+      this.castBindingCircle();
+      this.updateUI();
+    }
+
+    // 4. 敵人 AI 邏輯 (追逐與法陣束縛)
+    this.updateEnemies();
+  }
+
+  updateUI() {
+    this.hpBar.width = (playerStats.hp / playerStats.maxHp) * 200;
+    this.manaBar.width = (playerStats.mana / playerStats.maxMana) * 200;
+  }
+
+  // 普攻 (Attack)
+  performAttack(pointer) {
+    const angle = Phaser.Math.Angle.Between(this.playerContainer.x, this.playerContainer.y, pointer.x, pointer.y);
+    const attackDistance = 40;
+    const slashX = this.playerContainer.x + Math.cos(angle) * attackDistance;
+    const slashY = this.playerContainer.y + Math.sin(angle) * attackDistance;
+
+    // 攻擊視覺 (斬擊弧光)
+    const slash = this.add.circle(slashX, slashY, playerStats.attackRadius, 0xf6e69f, 0.6);
+    this.tweens.add({ targets: slash, scale: 1.3, alpha: 0, duration: 150, onComplete: () => slash.destroy() });
+
+    // 命中判定
+    this.enemies.forEach(enemy => {
+      if (!enemy.active) return;
+      const dist = Phaser.Math.Distance.Between(slashX, slashY, enemy.x, enemy.y);
+      if (dist <= playerStats.attackRadius + enemy.radius) {
+        this.damageEnemy(enemy, playerStats.attackDamage);
+      }
+    });
+  }
+
+  // Cast 魔法陣 (束縛敵人)
+  castBindingCircle() {
+    const castX = this.playerContainer.x;
+    const castY = this.playerContainer.y;
+    const radius = playerStats.castRadius;
+
+    const ring = this.add.circle(castX, castY, radius, 0x9370db, 0.25);
+    ring.setStrokeStyle(3, 0xba55d3);
+
+    const castData = { x: castX, y: castY, radius: radius, timer: 180, visual: ring };
+    this.casts.push(castData);
+
+    // 法陣消失動畫
+    this.time.delayedCall(3000, () => {
+      ring.destroy();
+      this.casts = this.casts.filter(c => c !== castData);
+    });
+  }
+
+  // 敵人波次與 AI
+  spawnEnemyWave() {
+    this.waveText.setText(`WAVE ${this.wave}`);
+    const count = 3 + this.wave * 2;
+    for (let i = 0; i < count; i++) {
+      const x = Phaser.Math.Between(100, 924);
+      const y = Phaser.Math.Between(100, 476);
+      
+      const enemyObj = this.add.circle(x, y, 14, 0xe74c3c);
+      this.physics.world.enable(enemyObj);
+      enemyObj.hp = 60 + this.wave * 15;
+      enemyObj.maxHp = enemyObj.hp;
+      enemyObj.radius = 14;
+      enemyObj.isBound = false;
+
+      this.enemies.push(enemyObj);
+    }
+  }
+
+  updateEnemies() {
+    this.enemies.forEach(enemy => {
+      if (!enemy.active) return;
+
+      // 檢查是否被法陣束縛 (Binding)
+      let bound = false;
+      this.casts.forEach(c => {
+        if (Phaser.Math.Distance.Between(enemy.x, enemy.y, c.x, c.y) <= c.radius) {
+          bound = true;
+        }
+      });
+
+      enemy.isBound = bound;
+
+      if (bound) {
+        // 被束縛：定身 + 變紫色
+        enemy.body.setVelocity(0, 0);
+        enemy.setFillStyle(0x9b59b6);
+      } else {
+        // 未被束縛：朝玩家移動
+        enemy.setFillStyle(0xe74c3c);
+        this.physics.moveToObject(enemy, this.playerContainer, 80 + this.wave * 10);
+      }
+    });
+  }
+
+  damageEnemy(enemy, damage) {
+    enemy.hp -= damage;
+
+    // 漂浮傷害數字
+    const dmgText = this.add.text(enemy.x, enemy.y - 10, `-${Math.round(damage)}`, {
+      fontSize: '16px', color: '#f6e69f', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.tweens.add({ targets: dmgText, y: enemy.y - 30, alpha: 0, duration: 600, onComplete: () => dmgText.destroy() });
+
+    if (enemy.hp <= 0) {
+      enemy.destroy();
+      this.enemies = this.enemies.filter(e => e !== enemy);
+
+      // 檢查波次是否結束
+      if (this.enemies.length === 0) {
+        this.time.delayedCall(500, () => this.triggerBoonSelection());
+      }
+    }
+  }
+
+  triggerBoonSelection() {
+    this.isPaused = true;
+    this.playerContainer.body.setVelocity(0, 0);
+
+    // 呼叫 HTML Overlay UI
+    const overlay = document.getElementById('boon-overlay');
+    const container = document.getElementById('boonsContainer');
+    container.innerHTML = '';
+
+    apolloBoonsPool.forEach(boon => {
+      const card = document.createElement('div');
+      card.className = 'boon-card';
+      card.innerHTML = `
+        <div>
+          <div class="boon-slot">${boon.slotName}</div>
+          <div class="boon-rarity rarity-${boon.rarity}">${boon.rarityText}</div>
+          <div class="boon-name">${boon.name}</div>
+          <div class="boon-desc">${boon.desc}</div>
+        </div>
+        <div class="select-btn">選擇 (SELECT)</div>
+      `;
+      card.onclick = () => {
+        boon.apply();
+        overlay.style.display = 'none';
+        this.isPaused = false;
+        this.wave++;
+        this.spawnEnemyWave();
+      };
+      container.appendChild(card);
+    });
+
+    overlay.style.display = 'flex';
+  }
+}
+
+// ===================================================
+// 3. 啟動 Phaser 遊戲
+// ===================================================
+const config = {
+  type: Phaser.AUTO,
+  width: 1024,
+  height: 576,
+  parent: 'game-container',
+  physics: { default: 'arcade', arcade: { debug: false } },
+  scene: [MainScene]
+};
+
+const game = new Phaser.Game(config);
+</script>
+</body>
+</html>

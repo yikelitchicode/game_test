@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>月蝕試煉</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #11101a; color: #eee7d7; font-family: system-ui, -apple-system, "Noto Sans TC", sans-serif; }
+    #shell { width: min(100vw, 1100px); padding: 18px; }
+    #game { width: 100%; aspect-ratio: 16 / 9; display: block; background: #191424; border: 1px solid #66525f; box-shadow: 0 18px 50px #0008; cursor: crosshair; }
+    #hud { display: flex; gap: 18px; justify-content: space-between; align-items: end; margin: 10px 2px 0; font-size: 14px; }
+    .bars { display: grid; gap: 5px; min-width: 230px; }
+    .bar { width: 100%; height: 10px; border: 1px solid #4c4056; background: #251d2d; overflow: hidden; }
+    .fill { height: 100%; transition: width .12s linear; }
+    #hp { background: #c75263; } #mana { background: #52b5b0; }
+    #hint { color: #aca4b3; text-align: right; line-height: 1.45; }
+    #boons, #gameover { position: fixed; inset: 0; display: none; place-items: center; padding: 20px; background: #08060ad9; }
+    #boons.show, #gameover.show { display: grid; }
+    .modal { width: min(920px, 100%); text-align: center; }
+    h1 { margin: 0 0 8px; font-size: 28px; color: #f3d980; letter-spacing: 0; }
+    .sub { margin: 0 0 25px; color: #77d6cc; letter-spacing: 2px; font-size: 13px; }
+    .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .boon { min-height: 250px; padding: 20px; display: flex; flex-direction: column; align-items: flex-start; text-align: left; background: #1b1723; border: 1px solid #5d5065; color: inherit; cursor: pointer; transition: transform .16s, border-color .16s, background .16s; }
+    .boon:hover, .boon:focus-visible { transform: translateY(-5px); border-color: #e0be59; background: #251f2d; outline: none; }
+    .rarity { color: #ba83e5; font-size: 12px; letter-spacing: 1px; }
+    .boon h2 { margin: 13px 0 10px; font-size: 20px; color: #f5eedf; }
+    .boon p { margin: 0; color: #c9c1cf; line-height: 1.55; }
+    .select { margin-top: auto; padding-top: 20px; color: #f3d980; font-size: 13px; }
+    #restart { padding: 11px 20px; border: 1px solid #e0be59; background: #2a2330; color: #f8e7a4; font: inherit; cursor: pointer; }
+    @media (max-width: 650px) { #shell { padding: 8px; } #hud { font-size: 12px; gap: 8px; } .bars { min-width: 145px; } #hint { max-width: 180px; } .choices { grid-template-columns: 1fr; } .boon { min-height: 0; padding: 15px; } .boon h2 { margin: 6px 0; } .select { padding-top: 10px; } }
+  </style>
+</head>
+<body>
+  <main id="shell">
+    <canvas id="game" width="1056" height="594" aria-label="月蝕試煉遊戲畫面"></canvas>
+    <div id="hud">
+      <div class="bars"><div>生命 <span id="hpText"></span><div class="bar"><div class="fill" id="hp"></div></div></div><div>魔力 <span id="manaText"></span><div class="bar"><div class="fill" id="mana"></div></div></div></div>
+      <div id="hint">第 <b id="wave">1</b> 波　擊敗 <b id="remaining">0</b> 名敵人<br>WASD / 方向鍵移動　滑鼠或 J 攻擊　Space 衝刺　E 法陣</div>
+    </div>
+  </main>
+  <section id="boons" aria-label="選擇祝福"><div class="modal"><p class="sub">阿波羅的祝福</p><h1>選擇一項力量</h1><div id="choices" class="choices"></div></div></section>
+  <section id="gameover"><div class="modal"><p class="sub">月蝕試煉</p><h1>你倒下了</h1><p id="score"></p><button id="restart">重新開始</button></div></section>
+  <script>
+    (() => {
+      const canvas = document.querySelector('#game'), ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height, keys = new Set();
+      const mouse = { x: W / 2, y: H / 2 };
+      const ui = { hp: document.querySelector('#hp'), mana: document.querySelector('#mana'), hpText: document.querySelector('#hpText'), manaText: document.querySelector('#manaText'), wave: document.querySelector('#wave'), remaining: document.querySelector('#remaining'), boons: document.querySelector('#boons'), choices: document.querySelector('#choices'), gameover: document.querySelector('#gameover'), score: document.querySelector('#score') };
+      let player, enemies, effects, wave, paused, kills, last, nextWaveTimer;
+      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+      const boons = [
+        { name: '熾耀耀擊', rarity: '史詩', text: '普通攻擊傷害 +45%，範圍 +25%。', apply: p => { p.damage *= 1.45; p.attackRadius *= 1.25; } },
+        { name: '日輪法陣', rarity: '稀有', text: '法陣範圍 +35%，每秒傷害提高。', apply: p => { p.castRadius *= 1.35; p.castDamage += 12; } },
+        { name: '炫光奔襲', rarity: '普通', text: '衝刺冷卻縮短，移動速度 +15%。', apply: p => { p.speed *= 1.15; p.dashCd *= .68; } },
+        { name: '月桂護佑', rarity: '稀有', text: '最大生命 +35，立即回復 35 生命。', apply: p => { p.maxHp += 35; p.hp = Math.min(p.maxHp, p.hp + 35); } },
+        { name: '星火回響', rarity: '普通', text: '魔力回復速度 +60%，施法消耗 -4。', apply: p => { p.manaRegen *= 1.6; p.castCost = Math.max(6, p.castCost - 4); } }
+      ];
+      function reset() {
+        player = { x: W / 2, y: H / 2, r: 15, hp: 100, maxHp: 100, mana: 100, maxMana: 100, speed: 255, damage: 28, attackRadius: 62, castRadius: 94, castDamage: 17, castCost: 20, manaRegen: 13, dashCd: 650, dashUntil: 0, dashReady: 0, attackReady: 0, invuln: 0, facing: 0 };
+        enemies = []; effects = []; wave = 1; kills = 0; paused = false; nextWaveTimer = 0; ui.gameover.classList.remove('show'); ui.boons.classList.remove('show'); spawnWave();
+      }
+      function spawnWave() {
+        const count = 3 + wave * 2;
+        for (let i = 0; i < count; i++) { let x, y; do { x = 45 + Math.random() * (W - 90); y = 70 + Math.random() * (H - 145); } while (Math.hypot(x - player.x, y - player.y) < 210); enemies.push({ x, y, r: 13 + Math.min(wave, 5), hp: 48 + wave * 20, maxHp: 48 + wave * 20, speed: 50 + wave * 7, hit: 0, slow: 0 }); }
+        ui.wave.textContent = wave;
+      }
+      function attack() {
+        if (paused || performance.now() < player.attackReady) return;
+        player.attackReady = performance.now() + 250;
+        const x = player.x + Math.cos(player.facing) * 44, y = player.y + Math.sin(player.facing) * 44;
+        effects.push({ type: 'slash', x, y, r: player.attackRadius, until: performance.now() + 130 });
+        enemies.forEach(e => { if (Math.hypot(e.x - x, e.y - y) < player.attackRadius + e.r) hurtEnemy(e, player.damage); });
+      }
+      function cast() {
+        if (paused || player.mana < player.castCost) return;
+        player.mana -= player.castCost; effects.push({ type: 'cast', x: player.x, y: player.y, r: player.castRadius, until: performance.now() + 2800, tick: 0 });
+      }
+      function dash() { const now = performance.now(); if (paused || now < player.dashReady) return; player.dashReady = now + player.dashCd; player.dashUntil = now + 145; player.invuln = now + 190; effects.push({ type: 'dash', x: player.x, y: player.y, until: now + 260 }); }
+      function hurtEnemy(e, amount) { if (e.dead) return; e.hp -= amount; e.hit = performance.now() + 100; effects.push({ type: 'number', x: e.x, y: e.y - 10, text: Math.round(amount), until: performance.now() + 500 }); if (e.hp <= 0) { e.dead = true; kills++; } }
+      function chooseBoon() {
+        paused = true; ui.choices.innerHTML = '';
+        [...boons].sort(() => Math.random() - .5).slice(0, 3).forEach(b => { const button = document.createElement('button'); button.className = 'boon'; button.innerHTML = `<span class="rarity">${b.rarity}</span><h2>${b.name}</h2><p>${b.text}</p><span class="select">點擊選擇</span>`; button.onclick = () => { b.apply(player); ui.boons.classList.remove('show'); paused = false; wave++; spawnWave(); }; ui.choices.append(button); });
+        ui.boons.classList.add('show');
+      }
+      function update(now, dt) {
+        if (paused) return;
+        const dx = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0);
+        const dy = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0);
+        const length = Math.hypot(dx, dy) || 1, speed = player.speed * (now < player.dashUntil ? 3.2 : 1);
+        player.x = clamp(player.x + dx / length * speed * dt, player.r, W - player.r); player.y = clamp(player.y + dy / length * speed * dt, player.r, H - player.r); player.mana = Math.min(player.maxMana, player.mana + player.manaRegen * dt);
+        effects.filter(f => f.type === 'cast').forEach(f => { if (now - f.tick > 300) { f.tick = now; enemies.forEach(e => { if (dist(e, f) < f.r + e.r) { hurtEnemy(e, player.castDamage); e.slow = now + 360; } }); } });
+        enemies.forEach(e => { if (e.dead) return; const d = dist(e, player), rate = now < e.slow ? .15 : 1; if (d > player.r + e.r + 3) { e.x += (player.x - e.x) / d * e.speed * rate * dt; e.y += (player.y - e.y) / d * e.speed * rate * dt; } else if (now > player.invuln) { player.hp -= (9 + wave * 1.2) * dt; player.invuln = now + 420; } });
+        enemies = enemies.filter(e => !e.dead); effects = effects.filter(f => f.until > now); if (!enemies.length && !nextWaveTimer) nextWaveTimer = now + 550; if (nextWaveTimer && now >= nextWaveTimer) { nextWaveTimer = 0; chooseBoon(); } if (player.hp <= 0) { paused = true; ui.score.textContent = `你在第 ${wave} 波擊敗了 ${kills} 名敵人。`; ui.gameover.classList.add('show'); }
+      }
+      function draw(now) {
+        ctx.fillStyle = '#16121e'; ctx.fillRect(0, 0, W, H);
+        ctx.strokeStyle = '#2b2435'; ctx.lineWidth = 1; for (let x = 0; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y < H; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+        effects.forEach(f => { const life = (f.until - now); if (f.type === 'cast') { ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fillStyle = '#9b70d633'; ctx.fill(); ctx.strokeStyle = '#d8a8ff'; ctx.lineWidth = 2; ctx.stroke(); } if (f.type === 'slash') { ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fillStyle = '#ffe79966'; ctx.fill(); } if (f.type === 'dash') { ctx.beginPath(); ctx.arc(f.x, f.y, 28 + life / 12, 0, Math.PI * 2); ctx.strokeStyle = '#57d8ca'; ctx.stroke(); } if (f.type === 'number') { ctx.fillStyle = '#ffe8a3'; ctx.font = 'bold 16px system-ui'; ctx.fillText(`-${f.text}`, f.x, f.y - (500 - life) / 18); } });
+        enemies.forEach(e => { ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fillStyle = now < e.slow ? '#a976d2' : (now < e.hit ? '#fff0b0' : '#c95262'); ctx.fill(); ctx.fillStyle = '#2d1822'; ctx.fillRect(e.x - e.r, e.y - e.r - 9, e.r * 2, 4); ctx.fillStyle = '#ef8b8d'; ctx.fillRect(e.x - e.r, e.y - e.r - 9, e.r * 2 * Math.max(0, e.hp / e.maxHp), 4); });
+        ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.facing); ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(-12, -13); ctx.lineTo(-6, 0); ctx.lineTo(-12, 13); ctx.closePath(); ctx.fillStyle = now < player.invuln ? '#d9fffa' : '#52cfc3'; ctx.fill(); ctx.restore();
+        ui.hp.style.width = `${clamp(player.hp / player.maxHp * 100, 0, 100)}%`; ui.mana.style.width = `${player.mana / player.maxMana * 100}%`; ui.hpText.textContent = `${Math.ceil(Math.max(0, player.hp))}/${player.maxHp}`; ui.manaText.textContent = `${Math.floor(player.mana)}/${player.maxMana}`; ui.remaining.textContent = enemies.length;
+      }
+      function loop(now) { const dt = Math.min(.05, (now - last) / 1000 || 0); last = now; update(now, dt); draw(now); requestAnimationFrame(loop); }
+      window.addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (['arrowup','arrowdown','arrowleft','arrowright',' ','j','e'].includes(k)) e.preventDefault(); keys.add(k); if (!e.repeat && k === ' ') dash(); if (!e.repeat && k === 'e') cast(); if (!e.repeat && k === 'j') attack(); }); window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+      canvas.addEventListener('mousemove', e => { const r = canvas.getBoundingClientRect(); mouse.x = (e.clientX - r.left) * W / r.width; mouse.y = (e.clientY - r.top) * H / r.height; player.facing = Math.atan2(mouse.y - player.y, mouse.x - player.x); }); canvas.addEventListener('mousedown', attack); document.querySelector('#restart').onclick = reset;
+      reset(); requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

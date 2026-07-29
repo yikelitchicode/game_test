@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>Hades 2 HTML Proto</title>
+  <style>
+    body { margin: 0; background: #0f0d13; display: flex; justify-content: center; align-items: center; height: 100vh; color: #fff; font-family: sans-serif; }
+    canvas { border: 2px solid #5d4272; box-shadow: 0 0 20px rgba(138, 43, 226, 0.4); }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 玩家狀態 (Melinoe Prototype)
+    const player = {
+      x: 400, y: 300, radius: 15, speed: 4,
+      hp: 100, maxHp: 100,
+      mana: 100, maxMana: 100,
+      casts: []
+    };
+
+    const keys = {};
+    window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+    // 鍵盤釋放法陣 (E 鍵)
+    window.addEventListener('keydown', e => {
+      if (e.key.toLowerCase() === 'e' && player.mana >= 20) {
+        player.mana -= 20;
+        player.casts.push({ x: player.x, y: player.y, radius: 80, timer: 180 }); // 存在 3 秒
+      }
+    });
+
+    // 主循環
+    function gameLoop() {
+      // 1. 更新邏輯
+      if (keys['w'] || keys['arrowup']) player.y -= player.speed;
+      if (keys['s'] || keys['arrowdown']) player.y += player.speed;
+      if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
+      if (keys['d'] || keys['arrowright']) player.x += player.speed;
+
+      // Mana 自然恢復
+      if (player.mana < player.maxMana) player.mana += 0.1;
+
+      // 法陣計時
+      player.casts.forEach((c, idx) => {
+        c.timer--;
+        if (c.timer <= 0) player.casts.splice(idx, 1);
+      });
+
+      // 2. 繪製畫面
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 繪製法陣 (Cast Area)
+      player.casts.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(147, 112, 219, 0.25)';
+        ctx.fill();
+        ctx.strokeStyle = '#ba55d3';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+
+      // 繪製玩家
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#20b2aa'; // 墨利諾厄綠
+      ctx.fill();
+
+      // UI 介面 (HP & Mana)
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillRect(20, 20, player.hp * 1.5, 12); // HP Bar
+      ctx.fillStyle = '#3498db';
+      ctx.fillRect(20, 38, player.mana * 1.5, 12); // Mana Bar
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`HP: ${Math.floor(player.hp)}`, 25, 31);
+      ctx.fillText(`Mana: ${Math.floor(player.mana)}`, 25, 49);
+      ctx.fillText(`按 [WASD] 移動 | 按 [E] 施放魔法陣 (消耗 20 Mana)`, 20, 580);
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
