@@ -29,7 +29,8 @@
     .boon p { margin: 0; color: #c9c1cf; line-height: 1.55; }
     .select { margin-top: auto; padding-top: 20px; color: #f3d980; font-size: 13px; }
     #restart { padding: 11px 20px; border: 1px solid #e0be59; background: #2a2330; color: #f8e7a4; font: inherit; cursor: pointer; }
-    @media (max-width: 650px) { #shell { padding: 8px; } #hud { font-size: 12px; gap: 8px; } .bars { min-width: 145px; } #hint { max-width: 180px; } .choices { grid-template-columns: 1fr; } .boon { min-height: 0; padding: 15px; } .boon h2 { margin: 6px 0; } .select { padding-top: 10px; } }
+    #touch { display: none; }
+    @media (max-width: 650px), (pointer: coarse) { body { place-items: start center; } #shell { padding: 8px; } #hud { font-size: 12px; gap: 8px; } .bars { min-width: 145px; } #hint { max-width: 180px; } .choices { grid-template-columns: 1fr; } .boon { min-height: 0; padding: 15px; } .boon h2 { margin: 6px 0; } .select { padding-top: 10px; } #touch { display: flex; justify-content: space-between; align-items: end; padding: 14px 3px 0; touch-action: none; } .dpad { position: relative; width: 132px; height: 132px; } .touch-btn { width: 43px; height: 43px; border: 1px solid #796a81; background: #241e2bcc; color: #f3e8cd; font: 20px system-ui; } .dpad .touch-btn { position: absolute; } [data-key="w"] { left: 44px; top: 0; } [data-key="a"] { left: 0; top: 44px; } [data-key="s"] { left: 44px; top: 44px; } [data-key="d"] { left: 88px; top: 44px; } .actions { display: grid; grid-template-columns: repeat(2, 58px); gap: 8px; } .actions .touch-btn { width: 58px; height: 58px; font-size: 12px; } .touch-btn:active { background: #69536d; border-color: #f0d477; } }
   </style>
 </head>
 <body>
@@ -39,6 +40,7 @@
       <div class="bars"><div>生命 <span id="hpText"></span><div class="bar"><div class="fill" id="hp"></div></div></div><div>魔力 <span id="manaText"></span><div class="bar"><div class="fill" id="mana"></div></div></div></div>
       <div id="hint">第 <b id="wave">1</b> 波　擊敗 <b id="remaining">0</b> 名敵人<br>WASD / 方向鍵移動　滑鼠或 J 攻擊　Space 衝刺　E 法陣</div>
     </div>
+    <div id="touch" aria-label="觸控操作"><div class="dpad"><button class="touch-btn" data-key="w" aria-label="向上">&#9650;</button><button class="touch-btn" data-key="a" aria-label="向左">&#9664;</button><button class="touch-btn" data-key="s" aria-label="向下">&#9660;</button><button class="touch-btn" data-key="d" aria-label="向右">&#9654;</button></div><div class="actions"><button class="touch-btn" data-action="attack">攻擊</button><button class="touch-btn" data-action="cast">法陣</button><button class="touch-btn" data-action="dash">衝刺</button></div></div>
   </main>
   <section id="boons" aria-label="選擇祝福"><div class="modal"><p class="sub">阿波羅的祝福</p><h1>選擇一項力量</h1><div id="choices" class="choices"></div></div></section>
   <section id="gameover"><div class="modal"><p class="sub">月蝕試煉</p><h1>你倒下了</h1><p id="score"></p><button id="restart">重新開始</button></div></section>
@@ -106,6 +108,8 @@
       function loop(now) { const dt = Math.min(.05, (now - last) / 1000 || 0); last = now; update(now, dt); draw(now); requestAnimationFrame(loop); }
       window.addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (['arrowup','arrowdown','arrowleft','arrowright',' ','j','e'].includes(k)) e.preventDefault(); keys.add(k); if (!e.repeat && k === ' ') dash(); if (!e.repeat && k === 'e') cast(); if (!e.repeat && k === 'j') attack(); }); window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
       canvas.addEventListener('mousemove', e => { const r = canvas.getBoundingClientRect(); mouse.x = (e.clientX - r.left) * W / r.width; mouse.y = (e.clientY - r.top) * H / r.height; player.facing = Math.atan2(mouse.y - player.y, mouse.x - player.x); }); canvas.addEventListener('mousedown', attack); document.querySelector('#restart').onclick = reset;
+      document.querySelectorAll('[data-key]').forEach(button => { const key = button.dataset.key; const press = e => { e.preventDefault(); keys.add(key); }; const release = e => { e.preventDefault(); keys.delete(key); }; button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointerleave', release); button.addEventListener('pointercancel', release); });
+      document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('pointerdown', e => { e.preventDefault(); const action = button.dataset.action; if (action === 'attack') attack(); if (action === 'cast') cast(); if (action === 'dash') dash(); }));
       reset(); requestAnimationFrame(loop);
     })();
   </script>
