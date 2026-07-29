@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>Hades 2 HTML Demo - 圓盤控制器版</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #08060a; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    #game-container { position: relative; width: 1024px; height: 576px; box-shadow: 0 0 30px rgba(138, 43, 226, 0.3); border: 2px solid #3a3245; }
+
+    /* Hades 2 神恩 UI 覆蓋層 */
+    #boon-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle, rgba(16, 12, 26, 0.85) 0%, rgba(4, 3, 8, 0.98) 100%);
+      display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+    .god-title { color: #20b2aa; font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; text-shadow: 0 0 10px rgba(32, 178, 170, 0.6); }
+    .main-title { color: #f6e69f; font-size: 2.2rem; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.5); margin-bottom: 30px; }
+    .boons-container { display: flex; gap: 20px; }
+    .boon-card {
+      width: 260px; height: 360px; background: rgba(12, 10, 18, 0.95); border: 2px solid #3a3245; border-radius: 8px;
+      padding: 20px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer;
+      transition: all 0.25s ease; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    }
+    .boon-card:hover { transform: translateY(-8px) scale(1.02); border-color: #d4af37; box-shadow: 0 0 20px rgba(32, 178, 170, 0.5); }
+    .boon-slot { font-size: 0.8rem; color: #8a8296; text-transform: uppercase; }
+    .boon-rarity { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; }
+    .rarity-epic { color: #a335ee; } .rarity-rare { color: #4a90e2; } .rarity-common { color: #a0a0a0; }
+    .boon-name { font-size: 1.3rem; color: #fff; font-weight: bold; margin-bottom: 10px; }
+    .boon-desc { font-size: 0.9rem; color: #c4becc; line-height: 1.4; flex-grow: 1; }
+    .highlight { color: #f6e69f; font-weight: bold; }
+    .select-btn { padding: 8px; background: rgba(212, 175, 55, 0.1); border: 1px solid #d4af37; color: #f6e69f; text-align: center; border-radius: 4px; font-size: 0.85rem; }
+    .boon-card:hover .select-btn { background: #d4af37; color: #000; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <!-- UI 彈窗 -->
+    <div id="boon-overlay">
+      <div class="god-title">◆ APOLLO ◆</div>
+      <div class="main-title">太陽神阿波羅的祝福</div>
+      <div class="boons-container" id="boonsContainer"></div>
+    </div>
+  </div>
+
+<script>
+// 1. 玩家狀態
+const playerStats = {
+  hp: 100, maxHp: 100,
+  mana: 100, maxMana: 100,
+  speed: 180,
+  attackDamage: 25,
+  attackRadius: 40,
+  castRadius: 90
+};
+
+const apolloBoonsPool = [
+  {
+    id: "apollo_attack", slotName: "【普通攻擊】", name: "熾耀耀擊", rarity: "epic", rarityText: "Epic 史詩",
+    desc: "普攻範圍擴大 <span class='highlight'>+50%</span>，傷害提升 <span class='highlight'>+40%</span>",
+    apply: () => { playerStats.attackRadius *= 1.5; playerStats.attackDamage *= 1.4; }
+  },
+  {
+    id: "apollo_cast", slotName: "【魔法陣】", name: "日輪法陣", rarity: "rare", rarityText: "Rare 稀有",
+    desc: "法陣範圍擴大 <span class='highlight'>+40%</span>",
+    apply: () => { playerStats.castRadius *= 1.4; }
+  },
+  {
+    id: "apollo_sprint", slotName: "【衝刺】", name: "炫光奔襲", rarity: "common", rarityText: "Common 普通",
+    desc: "移動與衝刺速度增加 <span class='highlight'>+30%</span>",
+    apply: () => { playerStats.speed *= 1.3; }
+  }
+];
+
+// 2. Phaser 遊戲場景
+class MainScene extends Phaser.Scene {
+  constructor() {
+    super('MainScene');
+    this.enemies = [];
+    this.casts = [];
+    this.wave = 1;
+    this.joystickVector = { x: 0, y: 0 }; // 圓盤輸出的向量 (-1 到 1)
+  }
+
+  create() {
+    // 網格背景
+    this.add.grid(512, 288, 1024, 576, 64, 64, 0x120f1d, 1, 0x231c33, 1);
+
+    // 玩家實體
+    this.playerCircle = this.add.circle(0, 0, 16, 0x20b2aa);
+    this.playerGlow = this.add.circle(0, 0, 22, 0x20b2aa, 0.3);
+    this.playerContainer = this.add.container(512, 288, [this.playerGlow, this.playerCircle]);
+    this.physics.world.enable(this.playerContainer);
+    this.playerContainer.body.setCollideWorldBounds(true);
+    this.playerContainer.body.setCircle(16, -16, -16);
+
+    // 鍵盤備用控制
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keyW = this.input.keyboard.addKey('W');
+    this.keyA = this.input.keyboard.addKey('A');
+    this.keyS = this.input.keyboard.addKey('S');
+    this.keyD = this.input.keyboard.addKey('D');
+
+    // 建立頂部血條 UI 與 左下角圓盤 UI
+    this.createUI();
+    this.createVirtualJoystick();
+
+    // 點擊右半邊遊戲區域觸發攻擊
+    this.input.on('pointerdown', (pointer) => {
+      // 避免點擊圓盤區域時誤觸攻擊
+      if (pointer.x > 250 || pointer.y < 350) {
+        if (pointer.leftButtonDown() && !this.isPaused) this.performAttack(pointer);
+      }
+    });
+
+    this.spawnEnemyWave();
+  }
+
+  // --------------------------------------------------
+  // 🕹️ 建立圓盤控制器 (Virtual Joystick)
+  // --------------------------------------------------
+  createVirtualJoystick() {
+    const baseX = 120;
+    const baseY = 460;
+    const maxRadius = 50;
+
+    // 圓盤底座
+    this.joyBase = this.add.circle(baseX, baseY, 60, 0x2a2233, 0.6)
+      .setStrokeStyle(3, 0x5d4272)
+      .setScrollFactor(0).setDepth(100);
+
+    // 圓盤搖桿中心點
+    this.joyThumb = this.add.circle(baseX, baseY, 25, 0x20b2aa, 0.8)
+      .setStrokeStyle(2, 0xf6e69f)
+      .setScrollFactor(0).setDepth(101);
+
+    this.joyThumb.setInteractive({ draggable: true });
+
+    // 拖拽搖桿邏輯
+    this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
+      if (gameObject !== this.joyThumb) return;
+
+      const dist = Phaser.Math.Distance.Between(baseX, baseY, dragX, dragY);
+      const angle = Phaser.Math.Angle.Between(baseX, baseY, dragX, dragY);
+
+      if (dist <= maxRadius) {
+        this.joyThumb.x = dragX;
+        this.joyThumb.y = dragY;
+      } else {
+        this.joyThumb.x = baseX + Math.cos(angle) * maxRadius;
+        this.joyThumb.y = baseY + Math.sin(angle) * maxRadius;
+      }
+
+      // 計算向外的正規化向量 (-1 ~ 1)
+      this.joystickVector.x = (this.joyThumb.x - baseX) / maxRadius;
+      this.joystickVector.y = (this.joyThumb.y - baseY) / maxRadius;
+    });
+
+    // 鬆開搖桿自動彈回中心
+    this.input.on('dragend', (pointer, gameObject) => {
+      if (gameObject !== this.joyThumb) return;
+      this.tweens.add({
+        targets: this.joyThumb,
+        x: baseX,
+        y: baseY,
+        duration: 100,
+        ease: 'Power2'
+      });
+      this.joystickVector = { x: 0, y: 0 };
+    });
+  }
+
+  // --------------------------------------------------
+  // 🎨 介面與按鈕 UI
+  // --------------------------------------------------
+  createUI() {
+    // 頂部 HP / Mana 條
+    this.add.rectangle(20, 20, 210, 18, 0x16121e).setOrigin(0, 0).setDepth(90);
+    this.hpBar = this.add.rectangle(25, 23, 200, 12, 0xe74c3c).setOrigin(0, 0).setDepth(91);
+    
+    this.add.rectangle(20, 42, 160, 14, 0x16121e).setOrigin(0, 0).setDepth(90);
+    this.manaBar = this.add.rectangle(25, 44, 150, 10, 0x3498db).setOrigin(0, 0).setDepth(91);
+
+    this.add.text(230, 20, 'HP', { fontSize: '12px', color: '#e74c3c', fontStyle: 'bold' }).setDepth(90);
+    this.add.text(185, 42, 'MANA', { fontSize: '11px', color: '#3498db', fontStyle: 'bold' }).setDepth(90);
+
+    // 右下角【法陣】與【衝刺】快捷圓形按鈕
+    this.createActionButton(930, 480, '法陣 [E]', 0x9370db, () => {
+      if (playerStats.mana >= 20) {
+        playerStats.mana -= 20;
+        this.castBindingCircle();
+        this.updateUI();
+      }
+    });
+
+    this.createActionButton(830, 500, '衝刺', 0x20b2aa, () => {
+      this.performDash();
+    });
+
+    this.waveText = this.add.text(980, 25, `WAVE ${this.wave}`, { fontSize: '18px', color: '#f6e69f', fontStyle: 'bold' }).setOrigin(1, 0.5);
+  }
+
+  createActionButton(x, y, label, color, callback) {
+    const btn = this.add.circle(x, y, 32, color, 0.7).setInteractive().setDepth(100);
+    btn.setStrokeStyle(2, 0xf6e69f);
+    this.add.text(x, y, label, { fontSize: '12px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(101);
+
+    btn.on('pointerdown', () => {
+      this.tweens.add({ targets: btn, scale: 0.85, yoyo: true, duration: 80 });
+      callback();
+    });
+  }
+
+  update(time, delta) {
+    if (this.isPaused) return;
+
+    // Mana 回復
+    if (playerStats.mana < playerStats.maxMana) {
+      playerStats.mana = Math.min(playerStats.maxMana, playerStats.mana + 0.15);
+      this.updateUI();
+    }
+
+    // 結合鍵盤與圓盤的移動計算
+    let moveX = this.joystickVector.x;
+    let moveY = this.joystickVector.y;
+
+    if (this.keyA.isDown || this.cursors.left.isDown) moveX -= 1;
+    if (this.keyD.isDown || this.cursors.right.isDown) moveX += 1;
+    if (this.keyW.isDown || this.cursors.up.isDown) moveY -= 1;
+    if (this.keyS.isDown || this.cursors.down.isDown) moveY += 1;
+
+    const vec = new Phaser.Math.Vector2(moveX, moveY);
+    if (vec.length() > 1) vec.normalize(); // 防止鍵盤斜向超速
+    vec.scale(playerStats.speed);
+
+    this.playerContainer.body.setVelocity(vec.x, vec.y);
+
+    this.updateEnemies();
+  }
+
+  performDash() {
+    const currentVel = this.playerContainer.body.velocity;
+    if (currentVel.x === 0 && currentVel.y === 0) return;
+
+    this.playerContainer.body.setVelocity(currentVel.x * 2.5, currentVel.y * 2.5);
+    this.tweens.add({ targets: this.playerGlow, scale: 2.2, alpha: 0, duration: 200, yoyo: true });
+  }
+
+  updateUI() {
+    this.hpBar.width = (playerStats.hp / playerStats.maxHp) * 200;
+    this.manaBar.width = (playerStats.mana / playerStats.maxMana) * 150;
+  }
+
+  performAttack(pointer) {
+    const angle = Phaser.Math.Angle.Between(this.playerContainer.x, this.playerContainer.y, pointer.x, pointer.y);
+    const slashX = this.playerContainer.x + Math.cos(angle) * 40;
+    const slashY = this.playerContainer.y + Math.sin(angle) * 40;
+
+    const slash = this.add.circle(slashX, slashY, playerStats.attackRadius, 0xf6e69f, 0.6);
+    this.tweens.add({ targets: slash, scale: 1.3, alpha: 0, duration: 150, onComplete: () => slash.destroy() });
+
+    this.enemies.forEach(enemy => {
+      if (!enemy.active) return;
+      if (Phaser.Math.Distance.Between(slashX, slashY, enemy.x, enemy.y) <= playerStats.attackRadius + 14) {
+        this.damageEnemy(enemy, playerStats.attackDamage);
+      }
+    });
+  }
+
+  castBindingCircle() {
+    const ring = this.add.circle(this.playerContainer.x, this.playerContainer.y, playerStats.castRadius, 0x9370db, 0.25);
+    ring.setStrokeStyle(3, 0xba55d3);
+    const castData = { x: this.playerContainer.x, y: this.playerContainer.y, radius: playerStats.castRadius };
+    this.casts.push(castData);
+
+    this.time.delayedCall(3000, () => {
+      ring.destroy();
+      this.casts = this.casts.filter(c => c !== castData);
+    });
+  }
+
+  spawnEnemyWave() {
+    this.waveText.setText(`WAVE ${this.wave}`);
+    for (let i = 0; i < 3 + this.wave * 2; i++) {
+      const enemy = this.add.circle(Phaser.Math.Between(100, 924), Phaser.Math.Between(100, 476), 14, 0xe74c3c);
+      this.physics.world.enable(enemy);
+      enemy.hp = 60 + this.wave * 15;
+      this.enemies.push(enemy);
+    }
+  }
+
+  updateEnemies() {
+    this.enemies.forEach(enemy => {
+      if (!enemy.active) return;
+
+      let bound = false;
+      this.casts.forEach(c => {
+        if (Phaser.Math.Distance.Between(enemy.x, enemy.y, c.x, c.y) <= c.radius) bound = true;
+      });
+
+      if (bound) {
+        enemy.body.setVelocity(0, 0);
+        enemy.setFillStyle(0x9b59b6);
+      } else {
+        enemy.setFillStyle(0xe74c3c);
+        this.physics.moveToObject(enemy, this.playerContainer, 80 + this.wave * 10);
+      }
+    });
+  }
+
+  damageEnemy(enemy, damage) {
+    enemy.hp -= damage;
+    const dmgText = this.add.text(enemy.x, enemy.y - 10, `-${Math.round(damage)}`, { fontSize: '16px', color: '#f6e69f', fontStyle: 'bold' }).setOrigin(0.5);
+    this.tweens.add({ targets: dmgText, y: enemy.y - 30, alpha: 0, duration: 600, onComplete: () => dmgText.destroy() });
+
+    if (enemy.hp <= 0) {
+      enemy.destroy();
+      this.enemies = this.enemies.filter(e => e !== enemy);
+      if (this.enemies.length === 0) this.time.delayedCall(500, () => this.triggerBoonSelection());
+    }
+  }
+
+  triggerBoonSelection() {
+    this.isPaused = true;
+    this.playerContainer.body.setVelocity(0, 0);
+
+    const overlay = document.getElementById('boon-overlay');
+    const container = document.getElementById('boonsContainer');
+    container.innerHTML = '';
+
+    apolloBoonsPool.forEach(boon => {
+      const card = document.createElement('div');
+      card.className = 'boon-card';
+      card.innerHTML = `
+        <div>
+          <div class="boon-slot">${boon.slotName}</div>
+          <div class="boon-rarity rarity-${boon.rarity}">${boon.rarityText}</div>
+          <div class="boon-name">${boon.name}</div>
+          <div class="boon-desc">${boon.desc}</div>
+        </div>
+        <div class="select-btn">選擇 (SELECT)</div>
+      `;
+      card.onclick = () => {
+        boon.apply();
+        overlay.style.display = 'none';
+        this.isPaused = false;
+        this.wave++;
+        this.spawnEnemyWave();
+      };
+      container.appendChild(card);
+    });
+
+    overlay.style.display = 'flex';
+  }
+}
+
+const config = {
+  type: Phaser.AUTO,
+  width: 1024,
+  height: 576,
+  parent: 'game-container',
+  physics: { default: 'arcade', arcade: { debug: false } },
+  scene: [MainScene]
+};
+
+const game = new Phaser.Game(config);
+</script>
+</body>
+</html>
